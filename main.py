@@ -1,7 +1,9 @@
 import pygame
-from pygame.locals import *
-from OpenGL.GL import *
-from OpenGL.GLU import *
+from pygame.locals import DOUBLEBUF, OPENGL, QUIT
+from OpenGL.GL import (glClear, GL_COLOR_BUFFER_BIT, GL_DEPTH_BUFFER_BIT,
+                       glBegin, glEnd, glVertex3fv, GL_TRIANGLES, glTranslatef,
+                       glRotatef)
+from OpenGL.GLU import gluPerspective
 
 
 def main():
@@ -14,7 +16,7 @@ def main():
 
     while True:
         for event in pygame.event.get():
-            if event.type == pygame.QUIT:
+            if event.type == QUIT:
                 pygame.quit()
                 quit()
 
