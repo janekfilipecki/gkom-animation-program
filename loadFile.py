@@ -1,4 +1,5 @@
-from OpenGL.GL import ( glBegin, glEnd, glVertex3fv, GL_TRIANGLES )
+from OpenGL.GL import (glBegin, glEnd, glVertex3fv, GL_TRIANGLES)
+
 
 def load_obj(filename):
     vertices = []
@@ -12,6 +13,7 @@ def load_obj(filename):
                 face = [int(idx.split('/')[0]) - 1 for idx in line.split()[1:]]
                 faces.append(face)
     return vertices, faces
+
 
 def draw_model(vertices, faces):
     glBegin(GL_TRIANGLES)

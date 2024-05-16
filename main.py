@@ -1,8 +1,7 @@
 import pygame
-from pygame.locals import DOUBLEBUF, OPENGL, QUIT
+from pygame.locals import DOUBLEBUF, OPENGL
 from OpenGL.GL import (glClear, GL_COLOR_BUFFER_BIT, GL_DEPTH_BUFFER_BIT,
-                       glBegin, glEnd, glVertex3fv, GL_TRIANGLES, glTranslatef,
-                       glRotatef)
+                       glTranslatef, glRotatef)
 from OpenGL.GLU import gluPerspective
 from loadFile import draw_model, load_obj
 import sys
@@ -15,7 +14,7 @@ def main():
     pygame.display.set_mode(display, DOUBLEBUF | OPENGL)
 
     gluPerspective(45, (display[0] / display[1]), 0.1, 50.0)
-    glTranslatef(0.0, 0.0, -5)
+    glTranslatef(0.0, 0.0, -20)
 
     vertices = []
     faces = []
