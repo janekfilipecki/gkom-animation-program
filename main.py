@@ -9,20 +9,36 @@ from OpenGL.GLU import gluPerspective, gluLookAt
 from loadFile import draw_model, load_obj
 import sys
 import math
+import signal
 
 
-def draw_grid():
-    """Draws a simple grid on the XY plane."""
+def draw_grid(zoom, fov, aspect):
+    """Draws a simple grid on the XY plane, adaptive to the view range."""
     glColor3fv((1, 0, 0))  # Set grid color to red
+
+    # Calculate the visible range at the zoom level
+    height = 2 * zoom * math.tan(math.radians(fov) / 2)
+    width = height * aspect
+
+    # Adjust grid size to cover the view
+    grid_size = max(width, height)
+
+    # Draw the grid
     glBegin(GL_LINES)
-    for x in range(-20, 21):
-        glVertex3fv((x, 20, 0))
-        glVertex3fv((x, -20, 0))
-    for y in range(-20, 21):
-        glVertex3fv((20, y, 0))
-        glVertex3fv((-20, y, 0))
+    step = 1  # Distance between grid lines
+    for x in range(int(-grid_size // 2), int(grid_size // 2) + 1, step):
+        glVertex3fv((x, grid_size // 2, 0))
+        glVertex3fv((x, -grid_size // 2, 0))
+    for y in range(int(-grid_size // 2), int(grid_size // 2) + 1, step):
+        glVertex3fv((grid_size // 2, y, 0))
+        glVertex3fv((-grid_size // 2, y, 0))
     glEnd()
-    glColor3fv((1, 1, 1))
+    glColor3fv((1, 1, 1))  # Reset color to white
+
+
+def handle_exit(signal, frame):
+    pygame.quit()
+    sys.exit(0)
 
 
 def main():
@@ -31,10 +47,14 @@ def main():
     display = (800, 600)
     pygame.display.set_mode(display, DOUBLEBUF | OPENGL)
 
+    # Set up the signal handler for graceful exit
+    signal.signal(signal.SIGINT, handle_exit)
+
     # Camera parameters
     zoom = 10
     azimuth = 0
     elevation = 0
+    fov = 45
 
     vertices = []
     faces = []
@@ -46,8 +66,7 @@ def main():
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                pygame.quit()
-                quit()
+                handle_exit(None, None)
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_UP:
                     zoom -= 1  # Move camera closer to the origin
@@ -77,7 +96,7 @@ def main():
         # Set the perspective projection
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
-        gluPerspective(45, (display[0] / display[1]), 0.1, 100.0)
+        gluPerspective(fov, (display[0] / display[1]), 0.1, 100.0)
 
         # Set the modelview matrix
         glMatrixMode(GL_MODELVIEW)
@@ -87,7 +106,7 @@ def main():
                   0, 0, 1)             # Up vector (z-axis)
 
         # Draw the grid
-        draw_grid()
+        draw_grid(zoom, fov, display[0] / display[1])
 
         # Apply rotation and draw the model
         glPushMatrix()
