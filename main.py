@@ -50,11 +50,14 @@ def main():
     # Set up the signal handler for graceful exit
     signal.signal(signal.SIGINT, handle_exit)
 
+    near_render_distance = 0.1
+    far_render_distance = 1000
+
     # Camera parameters
-    zoom = 10
-    azimuth = 0
-    elevation = 0
-    fov = 45
+    zoom = 20  # Initial zoom distance
+    azimuth = 0  # Initial azimuth angle
+    elevation = 20  # Initial elevation angle
+    fov = 45  # Field of view
 
     vertices = []
     faces = []
@@ -96,7 +99,8 @@ def main():
         # Set the perspective projection
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
-        gluPerspective(fov, (display[0] / display[1]), 0.1, 100.0)
+        gluPerspective(fov, (display[0] / display[1]),
+                       near_render_distance, far_render_distance)
 
         # Set the modelview matrix
         glMatrixMode(GL_MODELVIEW)
@@ -110,11 +114,11 @@ def main():
 
         # Apply rotation and draw the model
         glPushMatrix()
-        glRotatef(angle, 0, 1, 0)  # Rotate the model around the y-axis
+        glRotatef(angle, 1, 1, 1)  # Rotate the model around the y-axis
         draw_model(vertices, faces)
         glPopMatrix()
 
-        angle += 1  # Increment the rotation angle
+        angle += 5  # Increment the rotation angle
 
         # Update display
         pygame.display.flip()
