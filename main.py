@@ -4,7 +4,7 @@ from OpenGL.GL import (glClear, GL_COLOR_BUFFER_BIT,
                        GL_DEPTH_BUFFER_BIT, glRotatef,
                        glBegin, glEnd, glVertex3fv, glColor3fv, GL_LINES,
                        glPushMatrix, glPopMatrix, glMatrixMode, glLoadIdentity,
-                       GL_PROJECTION, GL_MODELVIEW)
+                       GL_PROJECTION, GL_MODELVIEW, glEnable, GL_DEPTH_TEST)
 from OpenGL.GLU import gluPerspective, gluLookAt
 from loadFile import draw_model, load_obj
 import sys
@@ -46,6 +46,9 @@ def main():
     pygame.init()
     display = (800, 600)
     pygame.display.set_mode(display, DOUBLEBUF | OPENGL)
+
+    # Enable depth testing
+    glEnable(GL_DEPTH_TEST)
 
     # Set up the signal handler for graceful exit
     signal.signal(signal.SIGINT, handle_exit)
