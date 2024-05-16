@@ -6,11 +6,10 @@ from OpenGL.GL import (glClear, GL_COLOR_BUFFER_BIT, GL_DEPTH_BUFFER_BIT,
 from OpenGL.GLU import gluPerspective
 from loadFile import draw_model, load_obj
 import sys
-import tkinter as tk
-from tkinter import filedialog
 
 
 def main():
+    file_path = sys.argv[1] if len(sys.argv) > 1 else None
     pygame.init()
     display = (800, 600)
     pygame.display.set_mode(display, DOUBLEBUF | OPENGL)
@@ -20,19 +19,14 @@ def main():
 
     vertices = []
     faces = []
+    if file_path:
+        vertices, faces = load_obj(file_path)
 
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 quit()
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_l:  # Press 'L' key to load a new model
-                    root = tk.Tk()
-                    root.withdraw()
-                    file_path = filedialog.askopenfilename(filetypes=[("OBJ Files", "*.obj")])
-                    if file_path:
-                        vertices, faces = load_obj(file_path)
 
         glRotatef(1, 3, 1, 1)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
