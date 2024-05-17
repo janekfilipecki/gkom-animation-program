@@ -69,11 +69,15 @@ def main():
 
     angle = 0
 
+    grid = True
+
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 handle_exit(None, None)
             elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_g:
+                    grid = not grid
                 if event.key == pygame.K_UP:
                     zoom -= 1  # Move camera closer to the origin
                 elif event.key == pygame.K_DOWN:
@@ -113,7 +117,8 @@ def main():
                   0, 0, 1)             # Up vector (z-axis)
 
         # Draw the grid
-        draw_grid(zoom, fov, display[0] / display[1])
+        if grid:
+            draw_grid(zoom, fov, display[0] / display[1])
 
         # Apply rotation and draw the model
         glPushMatrix()
