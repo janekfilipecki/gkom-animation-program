@@ -109,11 +109,15 @@ def main():
 
     angle = 0
 
+    grid = True
+
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 handle_exit(None, None)
             elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_g:
+                    grid = not grid
                 if event.key == pygame.K_UP:
                     zoom -= 1  # Move camera closer to the origin
                 elif event.key == pygame.K_DOWN:
@@ -145,6 +149,8 @@ def main():
         gluPerspective(fov, (display[0] / display[1]),
                        near_render_distance, far_render_distance)
 
+        setup_lighting()
+
         # Set the modelview matrix
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
@@ -153,11 +159,12 @@ def main():
                   0, 0, 1)             # Up vector (z-axis)
 
         # Draw the grid
-        draw_grid(zoom, fov, display[0] / display[1])
+        if grid:
+            draw_grid(zoom, fov, display[0] / display[1])
 
         # Apply rotation and draw the model
         glPushMatrix()
-        glRotatef(angle, 1, 1, 1)  # Rotate the model around the y-axis
+        glRotatef(angle, angle, 1, 1)  # Rotate the model around the y-axis
         draw_model(vertices, faces, normals)
         glPopMatrix()
 
