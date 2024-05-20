@@ -1,10 +1,13 @@
 import pygame
 from pygame.locals import DOUBLEBUF, OPENGL
-from OpenGL.GL import (glClear, GL_COLOR_BUFFER_BIT,
-                       GL_DEPTH_BUFFER_BIT, glRotatef,
-                       glBegin, glEnd, glVertex3fv, glColor3fv, GL_LINES,
-                       glPushMatrix, glPopMatrix, glMatrixMode, glLoadIdentity,
-                       GL_PROJECTION, GL_MODELVIEW, glEnable, GL_DEPTH_TEST)
+from OpenGL.GL import (glClear, GL_COLOR_BUFFER_BIT, GL_DEPTH_BUFFER_BIT,
+                       glRotatef, glBegin, glEnd, glVertex3fv, glColor3fv,
+                       GL_LINES, glPushMatrix, glPopMatrix, glMatrixMode,
+                       glLoadIdentity, GL_PROJECTION, GL_MODELVIEW, glEnable,
+                       GL_DEPTH_TEST, GL_LIGHTING, GL_LIGHT0, GL_AMBIENT,
+                       GL_DIFFUSE, GL_SPECULAR, GL_POSITION, GL_FRONT,
+                       GL_SHININESS, glMaterialfv, glLightfv, glMaterialf,
+                       glDisable)
 from OpenGL.GLU import gluPerspective, gluLookAt
 from loadFile import draw_model, load_obj
 import sys
@@ -14,6 +17,9 @@ import signal
 
 def draw_grid(zoom, fov, aspect):
     """Draws a simple grid on the XY plane, adaptive to the view range."""
+    glDisable(GL_LIGHTING)  # Disable lighting to ensure
+    # the grid color is not affected
+
     glColor3fv((1, 0, 0))  # Set grid color to red
 
     # Calculate the visible range at the zoom level
@@ -33,12 +39,42 @@ def draw_grid(zoom, fov, aspect):
         glVertex3fv((grid_size // 2, y, 0))
         glVertex3fv((-grid_size // 2, y, 0))
     glEnd()
+
+    glEnable(GL_LIGHTING)  # Re-enable lighting after drawing the grid
     glColor3fv((1, 1, 1))  # Reset color to white
 
 
 def handle_exit(signal, frame):
     pygame.quit()
     sys.exit(0)
+
+
+def setup_lighting():
+    """Set up lighting for the scene."""
+    glEnable(GL_LIGHTING)
+    glEnable(GL_LIGHT0)
+
+    # Define light properties
+    light_ambient = [0.1, 0.1, 0.1, 1.0]
+    light_diffuse = [0.8, 0.8, 0.8, 1.0]
+    light_specular = [1.0, 1.0, 1.0, 1.0]
+    light_position = [10.0, 10.0, 10.0, 1.0]
+
+    glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient)
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse)
+    glLightfv(GL_LIGHT0, GL_SPECULAR, light_specular)
+    glLightfv(GL_LIGHT0, GL_POSITION, light_position)
+
+    # Define material properties
+    material_ambient = [0.2, 0.2, 0.2, 1.0]
+    material_diffuse = [0.8, 0.8, 0.8, 1.0]
+    material_specular = [1.0, 1.0, 1.0, 1.0]
+    material_shininess = 50.0
+
+    glMaterialfv(GL_FRONT, GL_AMBIENT, material_ambient)
+    glMaterialfv(GL_FRONT, GL_DIFFUSE, material_diffuse)
+    glMaterialfv(GL_FRONT, GL_SPECULAR, material_specular)
+    glMaterialf(GL_FRONT, GL_SHININESS, material_shininess)
 
 
 def main():
@@ -53,6 +89,9 @@ def main():
     # Set up the signal handler for graceful exit
     signal.signal(signal.SIGINT, handle_exit)
 
+    # Set up lighting
+    setup_lighting()
+
     near_render_distance = 0.1
     far_render_distance = 1000
 
@@ -64,8 +103,9 @@ def main():
 
     vertices = []
     faces = []
+    normals = []
     if file_path:
-        vertices, faces = load_obj(file_path)
+        vertices, faces, normals = load_obj(file_path)
 
     angle = 0
 
@@ -123,7 +163,7 @@ def main():
         # Apply rotation and draw the model
         glPushMatrix()
         glRotatef(angle, 1, 1, 1)  # Rotate the model around the y-axis
-        draw_model(vertices, faces)
+        draw_model(vertices, faces, normals)
         glPopMatrix()
 
         angle += 5  # Increment the rotation angle
