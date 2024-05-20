@@ -149,6 +149,8 @@ def main():
         gluPerspective(fov, (display[0] / display[1]),
                        near_render_distance, far_render_distance)
 
+        setup_lighting()
+
         # Set the modelview matrix
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
@@ -162,7 +164,7 @@ def main():
 
         # Apply rotation and draw the model
         glPushMatrix()
-        glRotatef(angle, 1, 1, 1)  # Rotate the model around the y-axis
+        glRotatef(angle, angle, 1, 1)  # Rotate the model around the y-axis
         draw_model(vertices, faces, normals)
         glPopMatrix()
 
