@@ -13,6 +13,9 @@ from loadFile import draw_model, load_obj
 import sys
 import math
 import signal
+import tkinter as tk
+import threading
+import os
 
 
 def draw_grid(zoom, fov, aspect):
@@ -77,7 +80,7 @@ def setup_lighting():
     glMaterialf(GL_FRONT, GL_SHININESS, material_shininess)
 
 
-def main():
+def pygame_thread(camera_mode, frame_slider):
     file_path = sys.argv[1] if len(sys.argv) > 1 else None
     pygame.init()
     display = (800, 600)
@@ -87,7 +90,7 @@ def main():
     glEnable(GL_DEPTH_TEST)
 
     # Set up the signal handler for graceful exit
-    signal.signal(signal.SIGINT, handle_exit)
+    #signal.signal(signal.SIGINT, handle_exit)
 
     # Set up lighting
     setup_lighting()
@@ -110,11 +113,11 @@ def main():
     angle = 0
 
     grid = True
-
-    while True:
+    running =  True
+    while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                handle_exit(None, None)
+                running = False
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_g:
                     grid = not grid
@@ -154,9 +157,16 @@ def main():
         # Set the modelview matrix
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
-        gluLookAt(eye_x, eye_y, eye_z,  # Eye position (camera)
-                  0, 0, 0,             # Look at origin
-                  0, 0, 1)             # Up vector (z-axis)
+        if camera_mode.get() == "Orbiting":
+            gluLookAt(eye_x, eye_y, eye_z,  # Eye position (camera)
+                      0, 0, 0,             # Look at origin
+                      0, 0, 1)             # Up vector (z-axis)
+        else:
+            gluLookAt(eye_x, eye_y, eye_z,  # Eye position (camera)
+                      eye_x + math.cos(math.radians(azimuth)),  # Look at direction
+                      eye_y + math.sin(math.radians(azimuth)),
+                      eye_z,             # Up vector (z-axis)
+                      0, 0, 1)             # Up vector (z-axis)         # Up vector (z-axis)
 
         # Draw the grid
         if grid:
@@ -175,5 +185,29 @@ def main():
         pygame.time.wait(10)
 
 
+def create_gui():
+    root = tk.Tk()
+    root.title("Kontrolki Animacji")
+
+    # Wbudowanie okna Pygame w okno tkinter
+    embed = tk.Frame(root, width=800, height=600)
+    embed.grid(row=0, column=0, padx=10, pady=10)
+
+    control_frame = tk.Frame(root)
+    control_frame.grid(row=1, column=0, padx=10, pady=10)
+
+    camera_mode = tk.StringVar(value="Orbiting")
+    tk.Button(control_frame, text="Przełącz Kamerę", command=lambda: camera_mode.set("Freeflight" if camera_mode.get() == "Orbiting" else "Orbiting")).pack()
+
+    frame_slider = tk.Scale(control_frame, from_=0, to=100, orient=tk.HORIZONTAL, label="Klatki")
+    frame_slider.pack()
+
+    def start_pygame():
+        threading.Thread(target=pygame_thread, args=(camera_mode, frame_slider), daemon=True).start()
+
+    root.after(100, start_pygame)
+
+    root.mainloop()
+
 if __name__ == "__main__":
-    main()
+    create_gui()
