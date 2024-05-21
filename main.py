@@ -17,6 +17,11 @@ import tkinter as tk
 import threading
 import os
 
+keyframes = []
+interpolation_mode = None
+translate = [0, 0, 0]
+rotate = [0, 0, 0]
+scale = [1, 1, 1]
 
 def draw_grid(zoom, fov, aspect):
     """Draws a simple grid on the XY plane, adaptive to the view range."""
@@ -79,8 +84,67 @@ def setup_lighting():
     glMaterialfv(GL_FRONT, GL_SPECULAR, material_specular)
     glMaterialf(GL_FRONT, GL_SHININESS, material_shininess)
 
+def interpolate(start, end, alpha, mode):
+    if mode == "Linear":
+        return start + (end - start) * alpha
+    return start
+
+
+def apply_transformations(transform, alpha, mode):
+    translate = [interpolate(transform[0][i], transform[1][i], alpha, mode) for i in range(3)]
+    rotate = [interpolate(transform[2][i], transform[3][i], alpha, mode) for i in range(3)]
+    scale = [interpolate(transform[4][i], transform[5][i], alpha, mode) for i in range(3)]
+
+    glTranslatef(*translate)
+    glRotatef(rotate[0], 1, 0, 0)
+    glRotatef(rotate[1], 0, 1, 0)
+    glRotatef(rotate[2], 0, 0, 1)
+    glScalef(*scale)
+
+
+def update_transformations(frame_slider, transform_mode):
+    global keyframes, interpolation_mode, translate, rotate, scale
+
+    if not keyframes:
+        return translate, rotate, scale
+
+    current_frame = frame_slider.get()
+    prev_keyframe = None
+    next_keyframe = None
+
+    for i, keyframe in enumerate(keyframes):
+        frame, _, _, _ = keyframe
+        if frame <= current_frame:
+            prev_keyframe = keyframe
+        if frame >= current_frame and next_keyframe is None:
+            next_keyframe = keyframe
+            break
+
+    # Jeśli nie ma poprzedniej klatki kluczowej, użyj pierwszej klatki kluczowej
+    if prev_keyframe is None:
+        prev_keyframe = keyframes[0]
+
+    # Jeśli nie ma następnej klatki kluczowej, użyj ostatniej klatki kluczowej
+    if next_keyframe is None:
+        next_keyframe = keyframes[-1]
+
+    start_frame, start_translate, start_rotate, start_scale = prev_keyframe
+    end_frame, end_translate, end_rotate, end_scale = next_keyframe
+
+    if start_frame == end_frame:
+        return start_translate, start_rotate, start_scale
+
+    alpha = (current_frame - start_frame) / (end_frame - start_frame)
+    translate = [interpolate(start_translate[i], end_translate[i], alpha, interpolation_mode.get()) for i in range(3)]
+    rotate = [interpolate(start_rotate[i], end_rotate[i], alpha, interpolation_mode.get()) for i in range(3)]
+    scale = [interpolate(start_scale[i], end_scale[i], alpha, interpolation_mode.get()) for i in range(3)]
+
+    return translate, rotate, scale
+
 
 def pygame_thread(camera_mode, frame_slider, transform_mode):
+    global keyframes, interpolation_mode, translate, rotate, scale
+
     file_path = sys.argv[1] if len(sys.argv) > 1 else None
     pygame.init()
     display = (800, 600)
@@ -90,7 +154,7 @@ def pygame_thread(camera_mode, frame_slider, transform_mode):
     glEnable(GL_DEPTH_TEST)
 
     # Set up the signal handler for graceful exit
-    #signal.signal(signal.SIGINT, handle_exit)
+    # signal.signal(signal.SIGINT, handle_exit)
 
     # Set up lighting
     setup_lighting()
@@ -111,12 +175,9 @@ def pygame_thread(camera_mode, frame_slider, transform_mode):
         vertices, faces, normals = load_obj(file_path)
 
     angle = 0
-    translate = [0, 0, 0]
-    rotate = [0, 0, 0]
-    scale = [1, 1, 1]
 
     grid = True
-    running =  True
+    running = True
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -136,7 +197,7 @@ def pygame_thread(camera_mode, frame_slider, transform_mode):
                     azimuth -= 5  # Look left
                 elif event.key == pygame.K_d:
                     azimuth += 5  # Look right
-                            # Translacja
+                # Translacja
                 if transform_mode.get() == "Translation":
                     if event.key in (pygame.K_1, pygame.K_KP1):
                         translate[0] += 0.1  # Przesunięcie w osi X
@@ -154,33 +215,33 @@ def pygame_thread(camera_mode, frame_slider, transform_mode):
                 # Rotacja
                 elif transform_mode.get() == "Rotation":
                     if event.key in (pygame.K_1, pygame.K_KP1):
-                        rotate[0] += 5  # Przesunięcie w osi X
+                        rotate[0] += 5  # Obrót wokół osi X
                     elif event.key in (pygame.K_2, pygame.K_KP2):
-                        rotate[1] += 5  # Przesunięcie w osi Y
+                        rotate[1] += 5  # Obrót wokół osi Y
                     elif event.key in (pygame.K_3, pygame.K_KP3):
-                        rotate[2] += 5  # Przesunięcie w osi Z
+                        rotate[2] += 5  # Obrót wokół osi Z
 
                     elif event.key in (pygame.K_4, pygame.K_KP4):
-                        rotate[0] -= 5  # Przesunięcie w osi X w przeciwną stronę
+                        rotate[0] -= 5  # Obrót wokół osi X w przeciwną stronę
                     elif event.key in (pygame.K_5, pygame.K_KP5):
-                        rotate[1] -= 5  # Przesunięcie w osi Y w przeciwną stronę
+                        rotate[1] -= 5  # Obrót wokół osi Y w przeciwną stronę
                     elif event.key in (pygame.K_6, pygame.K_KP6):
-                        rotate[2] -= 5  # Przesunięcie w osi Z w przeciwną stronę
+                        rotate[2] -= 5  # Obrót wokół osi Z w przeciwną stronę
                 # Skalowanie
                 elif transform_mode.get() == "Scaling":
                     if event.key in (pygame.K_1, pygame.K_KP1):
-                        scale[0] += 1  # Przesunięcie w osi X
+                        scale[0] += 1  # Skalowanie w osi X
                     elif event.key in (pygame.K_2, pygame.K_KP2):
-                        scale[1] += 1  # Przesunięcie w osi Y
+                        scale[1] += 1  # Skalowanie w osi Y
                     elif event.key in (pygame.K_3, pygame.K_KP3):
-                        scale[2] += 1  # Przesunięcie w osi Z
+                        scale[2] += 1  # Skalowanie w osi Z
 
                     elif event.key in (pygame.K_4, pygame.K_KP4):
-                        scale[0] -= 0.1  # Przesunięcie w osi X w przeciwną stronę
+                        scale[0] -= 0.1  # Skalowanie w osi X w przeciwną stronę
                     elif event.key in (pygame.K_5, pygame.K_KP5):
-                        scale[1] -= 0.1  # Przesunięcie w osi Y w przeciwną stronę
+                        scale[1] -= 0.1  # Skalowanie w osi Y w przeciwną stronę
                     elif event.key in (pygame.K_6, pygame.K_KP6):
-                        scale[2] -= 0.1  # Przesunięcie w osi Z w przeciwną stronę
+                        scale[2] -= 0.1  # Skalowanie w osi Z w przeciwną stronę
 
         # Ensure elevation is within -90 to 90 degrees to avoid gimbal lock
         elevation = max(-90, min(90, elevation))
@@ -214,19 +275,22 @@ def pygame_thread(camera_mode, frame_slider, transform_mode):
                       eye_x + math.cos(math.radians(azimuth)),  # Look at direction
                       eye_y + math.sin(math.radians(azimuth)),
                       eye_z,             # Up vector (z-axis)
-                      0, 0, 1)             # Up vector (z-axis)         # Up vector (z-axis)
+                      0, 0, 1)             # Up vector (z-axis)
 
         # Draw the grid
         if grid:
             draw_grid(zoom, fov, display[0] / display[1])
 
-        # Apply rotation and draw the model
+        # Apply transformations and draw the model
         glPushMatrix()
+        if keyframes:
+            translate, rotate, scale = update_transformations(frame_slider, transform_mode)
         glTranslatef(*translate)
         glRotatef(rotate[0], 1, 0, 0)
         glRotatef(rotate[1], 0, 1, 0)
         glRotatef(rotate[2], 0, 0, 1)
         glScalef(*scale)
+
         draw_model(vertices, faces, normals)
         glPopMatrix()
 
@@ -236,15 +300,36 @@ def pygame_thread(camera_mode, frame_slider, transform_mode):
         pygame.display.flip()
         pygame.time.wait(10)
 
+
+def save_keyframe(frame_slider):
+    global keyframes, translate, rotate, scale
+    current_frame = frame_slider.get()
+    keyframes.append((current_frame, list(translate), list(rotate), list(scale)))
+
+
+def save_keyframe(frame_slider, keyframe_listbox):
+    global keyframes, translate, rotate, scale
+    current_frame = frame_slider.get()
+    keyframes.append((current_frame, list(translate), list(rotate), list(scale)))
+    keyframes.sort(key=lambda kf: kf[0])  # Sortuj klatki kluczowe po numerze klatki
+    keyframe_listbox.delete(0, tk.END)  # Wyczyść listę
+    for kf in keyframes:
+        keyframe_listbox.insert(tk.END, f"Klatka {kf[0]}")
+
+
 def show_keyframe_options(keyframe_frame, keyframe_mode, interpolation_mode):
     keyframe_frame.grid(row=3, column=0, columnspan=2, pady=10)
     keyframe_mode.set("Translation")
     interpolation_mode.set("Constant")
 
+
 def hide_keyframe_options(keyframe_frame):
-    keyframe_frame.pack_forget()
+    keyframe_frame.grid_forget()
+
 
 def create_gui():
+    global interpolation_mode
+
     root = tk.Tk()
     root.title("Kontrolki Animacji")
 
@@ -266,6 +351,12 @@ def create_gui():
     frame_slider = tk.Scale(control_frame, from_=0, to=100, orient=tk.HORIZONTAL, label="Klatki")
     frame_slider.grid(row=1, column=0, pady=5)
 
+    keyframe_label = tk.Label(control_frame, text="Keyframes: []")
+    keyframe_label.grid(row=2, column=0, pady=5)
+
+    keyframe_listbox = tk.Listbox(control_frame, height=5)
+    keyframe_listbox.grid(row=3, column=0, pady=5)
+
     keyframe_mode = tk.StringVar()
     interpolation_mode = tk.StringVar()
     transform_mode = tk.StringVar(value="Translation")
@@ -280,7 +371,7 @@ def create_gui():
     tk.Radiobutton(keyframe_frame, text="Stała", variable=interpolation_mode, value="Constant").grid(row=5, column=0, sticky=tk.W, pady=2)
     tk.Radiobutton(keyframe_frame, text="Liniowa", variable=interpolation_mode, value="Linear").grid(row=6, column=0, sticky=tk.W, pady=2)
 
-    tk.Button(keyframe_frame, text="Save", command=lambda: hide_keyframe_options(keyframe_frame)).grid(row=7, column=0, sticky=tk.W, padx=5, pady=10)
+    tk.Button(keyframe_frame, text="Save", command=lambda: [save_keyframe(frame_slider, keyframe_listbox), hide_keyframe_options(keyframe_frame)]).grid(row=7, column=0, sticky=tk.W, padx=5, pady=10)
     tk.Button(keyframe_frame, text="Odrzuć", command=lambda: hide_keyframe_options(keyframe_frame)).grid(row=7, column=1, sticky=tk.E, padx=5, pady=10)
 
     tk.Button(control_frame, text="Wstaw Klatkę Kluczową", command=lambda: show_keyframe_options(keyframe_frame, keyframe_mode, interpolation_mode)).grid(row=2, column=0, pady=10)
