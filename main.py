@@ -7,7 +7,7 @@ from OpenGL.GL import (glClear, GL_COLOR_BUFFER_BIT, GL_DEPTH_BUFFER_BIT,
                        GL_DEPTH_TEST, GL_LIGHTING, GL_LIGHT0, GL_AMBIENT,
                        GL_DIFFUSE, GL_SPECULAR, GL_POSITION, GL_FRONT,
                        GL_SHININESS, glMaterialfv, glLightfv, glMaterialf,
-                       glDisable)
+                       glDisable, glTranslatef, glScalef)
 from OpenGL.GLU import gluPerspective, gluLookAt
 from loadFile import draw_model, load_obj
 import sys
@@ -80,7 +80,7 @@ def setup_lighting():
     glMaterialf(GL_FRONT, GL_SHININESS, material_shininess)
 
 
-def pygame_thread(camera_mode, frame_slider):
+def pygame_thread(camera_mode, frame_slider, transform_mode):
     file_path = sys.argv[1] if len(sys.argv) > 1 else None
     pygame.init()
     display = (800, 600)
@@ -111,6 +111,9 @@ def pygame_thread(camera_mode, frame_slider):
         vertices, faces, normals = load_obj(file_path)
 
     angle = 0
+    translate = [0, 0, 0]
+    rotate = [0, 0, 0]
+    scale = [1, 1, 1]
 
     grid = True
     running =  True
@@ -133,6 +136,51 @@ def pygame_thread(camera_mode, frame_slider):
                     azimuth -= 5  # Look left
                 elif event.key == pygame.K_d:
                     azimuth += 5  # Look right
+                            # Translacja
+                if transform_mode.get() == "Translation":
+                    if event.key in (pygame.K_1, pygame.K_KP1):
+                        translate[0] += 0.1  # Przesunięcie w osi X
+                    elif event.key in (pygame.K_2, pygame.K_KP2):
+                        translate[1] += 0.1  # Przesunięcie w osi Y
+                    elif event.key in (pygame.K_3, pygame.K_KP3):
+                        translate[2] += 0.1  # Przesunięcie w osi Z
+
+                    elif event.key in (pygame.K_4, pygame.K_KP4):
+                        translate[0] -= 0.1  # Przesunięcie w osi X w przeciwną stronę
+                    elif event.key in (pygame.K_5, pygame.K_KP5):
+                        translate[1] -= 0.1  # Przesunięcie w osi Y w przeciwną stronę
+                    elif event.key in (pygame.K_6, pygame.K_KP6):
+                        translate[2] -= 0.1  # Przesunięcie w osi Z w przeciwną stronę
+                # Rotacja
+                elif transform_mode.get() == "Rotation":
+                    if event.key in (pygame.K_1, pygame.K_KP1):
+                        rotate[0] += 5  # Przesunięcie w osi X
+                    elif event.key in (pygame.K_2, pygame.K_KP2):
+                        rotate[1] += 5  # Przesunięcie w osi Y
+                    elif event.key in (pygame.K_3, pygame.K_KP3):
+                        rotate[2] += 5  # Przesunięcie w osi Z
+
+                    elif event.key in (pygame.K_4, pygame.K_KP4):
+                        rotate[0] -= 5  # Przesunięcie w osi X w przeciwną stronę
+                    elif event.key in (pygame.K_5, pygame.K_KP5):
+                        rotate[1] -= 5  # Przesunięcie w osi Y w przeciwną stronę
+                    elif event.key in (pygame.K_6, pygame.K_KP6):
+                        rotate[2] -= 5  # Przesunięcie w osi Z w przeciwną stronę
+                # Skalowanie
+                elif transform_mode.get() == "Scaling":
+                    if event.key in (pygame.K_1, pygame.K_KP1):
+                        scale[0] += 1  # Przesunięcie w osi X
+                    elif event.key in (pygame.K_2, pygame.K_KP2):
+                        scale[1] += 1  # Przesunięcie w osi Y
+                    elif event.key in (pygame.K_3, pygame.K_KP3):
+                        scale[2] += 1  # Przesunięcie w osi Z
+
+                    elif event.key in (pygame.K_4, pygame.K_KP4):
+                        scale[0] -= 0.1  # Przesunięcie w osi X w przeciwną stronę
+                    elif event.key in (pygame.K_5, pygame.K_KP5):
+                        scale[1] -= 0.1  # Przesunięcie w osi Y w przeciwną stronę
+                    elif event.key in (pygame.K_6, pygame.K_KP6):
+                        scale[2] -= 0.1  # Przesunięcie w osi Z w przeciwną stronę
 
         # Ensure elevation is within -90 to 90 degrees to avoid gimbal lock
         elevation = max(-90, min(90, elevation))
@@ -174,7 +222,11 @@ def pygame_thread(camera_mode, frame_slider):
 
         # Apply rotation and draw the model
         glPushMatrix()
-        glRotatef(angle, angle, 1, 1)  # Rotate the model around the y-axis
+        glTranslatef(*translate)
+        glRotatef(rotate[0], 1, 0, 0)
+        glRotatef(rotate[1], 0, 1, 0)
+        glRotatef(rotate[2], 0, 0, 1)
+        glScalef(*scale)
         draw_model(vertices, faces, normals)
         glPopMatrix()
 
@@ -184,26 +236,57 @@ def pygame_thread(camera_mode, frame_slider):
         pygame.display.flip()
         pygame.time.wait(10)
 
+def show_keyframe_options(keyframe_frame, keyframe_mode, interpolation_mode):
+    keyframe_frame.grid(row=3, column=0, columnspan=2, pady=10)
+    keyframe_mode.set("Translation")
+    interpolation_mode.set("Constant")
+
+def hide_keyframe_options(keyframe_frame):
+    keyframe_frame.pack_forget()
 
 def create_gui():
     root = tk.Tk()
     root.title("Kontrolki Animacji")
 
+    # Ustawienia układu głównego okna
+    root.grid_rowconfigure(0, weight=1)
+    root.grid_columnconfigure(0, weight=1)
+    root.grid_columnconfigure(1, weight=1)
+
     # Wbudowanie okna Pygame w okno tkinter
     embed = tk.Frame(root, width=800, height=600)
-    embed.grid(row=0, column=0, padx=10, pady=10)
+    embed.grid(row=0, column=0, columnspan=2, padx=10, pady=10)
 
     control_frame = tk.Frame(root)
-    control_frame.grid(row=1, column=0, padx=10, pady=10)
+    control_frame.grid(row=1, column=0, columnspan=2, pady=20)
 
     camera_mode = tk.StringVar(value="Orbiting")
-    tk.Button(control_frame, text="Przełącz Kamerę", command=lambda: camera_mode.set("Freeflight" if camera_mode.get() == "Orbiting" else "Orbiting")).pack()
+    tk.Button(control_frame, text="Przełącz Kamerę", command=lambda: camera_mode.set("Freeflight" if camera_mode.get() == "Orbiting" else "Orbiting")).grid(row=0, column=0, pady=5)
 
     frame_slider = tk.Scale(control_frame, from_=0, to=100, orient=tk.HORIZONTAL, label="Klatki")
-    frame_slider.pack()
+    frame_slider.grid(row=1, column=0, pady=5)
+
+    keyframe_mode = tk.StringVar()
+    interpolation_mode = tk.StringVar()
+    transform_mode = tk.StringVar(value="Translation")
+
+    keyframe_frame = tk.Frame(control_frame)
+    tk.Label(keyframe_frame, text="Wybierz tryb przekształcenia:").grid(row=0, column=0, pady=5)
+    tk.Radiobutton(keyframe_frame, text="Translacja", variable=transform_mode, value="Translation").grid(row=1, column=0, sticky=tk.W, pady=2)
+    tk.Radiobutton(keyframe_frame, text="Rotacja", variable=transform_mode, value="Rotation").grid(row=2, column=0, sticky=tk.W, pady=2)
+    tk.Radiobutton(keyframe_frame, text="Skalowanie", variable=transform_mode, value="Scaling").grid(row=3, column=0, sticky=tk.W, pady=2)
+
+    tk.Label(keyframe_frame, text="Wybierz interpolację:").grid(row=4, column=0, pady=5)
+    tk.Radiobutton(keyframe_frame, text="Stała", variable=interpolation_mode, value="Constant").grid(row=5, column=0, sticky=tk.W, pady=2)
+    tk.Radiobutton(keyframe_frame, text="Liniowa", variable=interpolation_mode, value="Linear").grid(row=6, column=0, sticky=tk.W, pady=2)
+
+    tk.Button(keyframe_frame, text="Save", command=lambda: hide_keyframe_options(keyframe_frame)).grid(row=7, column=0, sticky=tk.W, padx=5, pady=10)
+    tk.Button(keyframe_frame, text="Odrzuć", command=lambda: hide_keyframe_options(keyframe_frame)).grid(row=7, column=1, sticky=tk.E, padx=5, pady=10)
+
+    tk.Button(control_frame, text="Wstaw Klatkę Kluczową", command=lambda: show_keyframe_options(keyframe_frame, keyframe_mode, interpolation_mode)).grid(row=2, column=0, pady=10)
 
     def start_pygame():
-        threading.Thread(target=pygame_thread, args=(camera_mode, frame_slider), daemon=True).start()
+        threading.Thread(target=pygame_thread, args=(camera_mode, frame_slider, transform_mode), daemon=True).start()
 
     root.after(100, start_pygame)
 
