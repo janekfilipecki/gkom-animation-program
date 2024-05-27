@@ -9,7 +9,7 @@ from OpenGL.GL import (glClear, GL_COLOR_BUFFER_BIT, GL_DEPTH_BUFFER_BIT,
                        GL_SHININESS, glMaterialfv, glLightfv, glMaterialf,
                        glDisable, glTranslatef, glScalef)
 from OpenGL.GLU import gluPerspective, gluLookAt
-from gui import create_light_frame, choose_color, get_coordinates
+from gui import create_light_frame, choose_color, create_material_frame, get_coordinates, get_shininess
 from loadFile import draw_model, load_obj
 from light import Light, Material
 import sys
@@ -333,6 +333,25 @@ def light_change_handler(change_type: str, *args):
         light.change_light(position=position)
 
 
+def material_change_handler(change_type: str, *args):
+    color = ["ambient", "diffuse", "specular"]
+    if change_type in color:
+        color_code = list(choose_color())
+        color_code = [value/255 for value in color_code]
+        color_code.append(1.0)
+
+    if change_type == "ambient":
+        material.change_material(ambient=color_code)
+    if change_type == "diffuse":
+        material.change_material(diffuse=color_code)
+    if change_type == "specular":
+        material.change_material(specular=color_code)
+
+    if change_type == "shininess":
+        shininess = get_shininess(*args)
+        material.change_material(shininess=shininess)
+
+
 def create_gui():
     global interpolation_mode
 
@@ -353,8 +372,13 @@ def create_gui():
     light_frame.grid(row=1, column=0, columnspan=2, pady=20)
     create_light_frame(light_frame, light_change_handler)
 
+    material_frame = ttk.Frame(notebook)
+    material_frame.grid(row=1, column=0, columnspan=2, pady=20)
+    create_material_frame(material_frame, material_change_handler)
+
     notebook.add(control_frame, text='Klatki')
     notebook.add(light_frame, text="Światło")
+    notebook.add(material_frame, text="Materiał")
 
     notebook.pack(expand=1, fill='both')
 

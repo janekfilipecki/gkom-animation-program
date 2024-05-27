@@ -16,6 +16,16 @@ class Material:
         self.specular = specular
         self.shininess = shininess
 
+    def change_material(self, ambient=None, diffuse=None, specular=None, shininess=None):
+        if ambient:
+            self.ambient = ambient
+        if diffuse:
+            self.diffuse = diffuse
+        if specular:
+            self.specular = specular
+        if shininess:
+            self.shininess = shininess
+
 
 class Light:
     def __init__(
