@@ -9,7 +9,7 @@ from OpenGL.GL import (glClear, GL_COLOR_BUFFER_BIT, GL_DEPTH_BUFFER_BIT,
                        GL_SHININESS, glMaterialfv, glLightfv, glMaterialf,
                        glDisable, glTranslatef, glScalef)
 from OpenGL.GLU import gluPerspective, gluLookAt
-from gui import create_light_frame, choose_color
+from gui import create_light_frame, choose_color, get_coordinates
 from loadFile import draw_model, load_obj
 from light import Light, Material
 import sys
@@ -314,16 +314,23 @@ def hide_keyframe_options(keyframe_frame):
     keyframe_frame.grid_forget()
 
 
-def light_color_change(light_color_type: str):
-    color_code = list(choose_color())
-    color_code = [value/255 for value in color_code]
-    color_code.append(1.0)
-    if light_color_type == "ambient":
+def light_change_handler(change_type: str, *args):
+    color = ["ambient", "diffuse", "specular"]
+    if change_type in color:
+        color_code = list(choose_color())
+        color_code = [value/255 for value in color_code]
+        color_code.append(1.0)
+
+    if change_type == "ambient":
         light.change_light(ambient=color_code)
-    if light_color_type == "diffuse":
+    if change_type == "diffuse":
         light.change_light(diffuse=color_code)
-    if light_color_type == "specular":
+    if change_type == "specular":
         light.change_light(specular=color_code)
+
+    if change_type == "position":
+        position = get_coordinates(*args)
+        light.change_light(position=position)
 
 
 def create_gui():
@@ -344,7 +351,7 @@ def create_gui():
 
     light_frame = ttk.Frame(notebook)
     light_frame.grid(row=1, column=0, columnspan=2, pady=20)
-    create_light_frame(light_frame, light_color_change)
+    create_light_frame(light_frame, light_change_handler)
 
     notebook.add(control_frame, text='Klatki')
     notebook.add(light_frame, text="Światło")

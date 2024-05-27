@@ -31,6 +31,7 @@ class Light:
         self.diffuse = diffuse
         self.specular = specular
         self.position = position
+        self.setup_lighting()
 
     def change_light(self, ambient=None, diffuse=None, specular=None, position=None):
         if ambient:
@@ -41,7 +42,6 @@ class Light:
             self.specular = specular
         if position:
             self.position = position
-        self.setup_lighting()
 
     def setup_lighting(self):
         """Set up lighting for the scene."""
