@@ -10,6 +10,7 @@ from OpenGL.GL import (glClear, GL_COLOR_BUFFER_BIT, GL_DEPTH_BUFFER_BIT,
                        glDisable, glTranslatef, glScalef)
 from OpenGL.GLU import gluPerspective, gluLookAt
 from loadFile import draw_model, load_obj
+from light import Light, Material
 import sys
 import math
 import signal
@@ -165,7 +166,8 @@ def pygame_thread(frame_slider, transform_mode):
     # signal.signal(signal.SIGINT, handle_exit)
 
     # Set up lighting
-    setup_lighting()
+    material = Material()
+    light = Light(material, ambient=[0.1, 1, 0.1, 1])
 
     near_render_distance = 0.1
     far_render_distance = 1000
@@ -275,7 +277,7 @@ def pygame_thread(frame_slider, transform_mode):
         gluPerspective(fov, (display[0] / display[1]),
                        near_render_distance, far_render_distance)
 
-        setup_lighting()
+        light.setup_lighting()
 
         # Set the modelview matrix
         glMatrixMode(GL_MODELVIEW)
