@@ -9,12 +9,14 @@ from OpenGL.GL import (glClear, GL_COLOR_BUFFER_BIT, GL_DEPTH_BUFFER_BIT,
                        GL_SHININESS, glMaterialfv, glLightfv, glMaterialf,
                        glDisable, glTranslatef, glScalef)
 from OpenGL.GLU import gluPerspective, gluLookAt
+from gui import create_light_frame, choose_color
 from loadFile import draw_model, load_obj
 from light import Light, Material
 import sys
 import math
 import signal
 import tkinter as tk
+from tkinter import ttk, colorchooser
 import threading
 import os
 
@@ -57,34 +59,6 @@ def draw_grid(zoom, fov, aspect):
 def handle_exit(signal, frame):
     pygame.quit()
     sys.exit(0)
-
-
-def setup_lighting():
-    """Set up lighting for the scene."""
-    glEnable(GL_LIGHTING)
-    glEnable(GL_LIGHT0)
-
-    # Define light properties
-    light_ambient = [0.1, 0.1, 0.1, 1.0]
-    light_diffuse = [0.8, 0.8, 0.8, 1.0]
-    light_specular = [1.0, 1.0, 1.0, 1.0]
-    light_position = [10.0, 10.0, 10.0, 1.0]
-
-    glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient)
-    glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse)
-    glLightfv(GL_LIGHT0, GL_SPECULAR, light_specular)
-    glLightfv(GL_LIGHT0, GL_POSITION, light_position)
-
-    # Define material properties
-    material_ambient = [0.2, 0.2, 0.2, 1.0]
-    material_diffuse = [0.8, 0.8, 0.8, 1.0]
-    material_specular = [1.0, 1.0, 1.0, 1.0]
-    material_shininess = 50.0
-
-    glMaterialfv(GL_FRONT, GL_AMBIENT, material_ambient)
-    glMaterialfv(GL_FRONT, GL_DIFFUSE, material_diffuse)
-    glMaterialfv(GL_FRONT, GL_SPECULAR, material_specular)
-    glMaterialf(GL_FRONT, GL_SHININESS, material_shininess)
 
 
 def interpolate(start, end, alpha, mode):
@@ -152,7 +126,7 @@ def update_transformations(frame_slider, transform_mode):
 
 
 def pygame_thread(frame_slider, transform_mode):
-    global keyframes, interpolation_mode, translate, rotate, scale
+    global keyframes, interpolation_mode, translate, rotate, scale, material, light
 
     file_path = sys.argv[1] if len(sys.argv) > 1 else None
     pygame.init()
@@ -340,19 +314,42 @@ def hide_keyframe_options(keyframe_frame):
     keyframe_frame.grid_forget()
 
 
+def light_color_change(light_color_type: str):
+    color_code = list(choose_color())
+    color_code = [value/255 for value in color_code]
+    color_code.append(1.0)
+    if light_color_type == "ambient":
+        light.change_light(ambient=color_code)
+    if light_color_type == "diffuse":
+        light.change_light(diffuse=color_code)
+    if light_color_type == "specular":
+        light.change_light(specular=color_code)
+
+
 def create_gui():
     global interpolation_mode
 
     root = tk.Tk()
     root.title("Kontrolki Animacji")
 
+    notebook = ttk.Notebook(root)
+
     # Ustawienia układu głównego okna
     root.grid_rowconfigure(0, weight=1)
     root.grid_columnconfigure(0, weight=1)
     root.grid_columnconfigure(1, weight=1)
 
-    control_frame = tk.Frame(root)
+    control_frame = ttk.Frame(notebook)
     control_frame.grid(row=1, column=0, columnspan=2, pady=20)
+
+    light_frame = ttk.Frame(notebook)
+    light_frame.grid(row=1, column=0, columnspan=2, pady=20)
+    create_light_frame(light_frame, light_color_change)
+
+    notebook.add(control_frame, text='Klatki')
+    notebook.add(light_frame, text="Światło")
+
+    notebook.pack(expand=1, fill='both')
 
     frame_slider = tk.Scale(control_frame, from_=0,
                             to=100, orient=tk.HORIZONTAL, label="Klatki")
