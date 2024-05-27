@@ -349,10 +349,6 @@ def create_gui():
     root.grid_columnconfigure(0, weight=1)
     root.grid_columnconfigure(1, weight=1)
 
-    # Wbudowanie okna Pygame w okno tkinter
-    embed = tk.Frame(root, width=800, height=600)
-    embed.grid(row=0, column=0, columnspan=2, padx=10, pady=10)
-
     control_frame = tk.Frame(root)
     control_frame.grid(row=1, column=0, columnspan=2, pady=20)
 
