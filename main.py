@@ -4,21 +4,19 @@ from OpenGL.GL import (glClear, GL_COLOR_BUFFER_BIT, GL_DEPTH_BUFFER_BIT,
                        glRotatef, glBegin, glEnd, glVertex3fv, glColor3fv,
                        GL_LINES, glPushMatrix, glPopMatrix, glMatrixMode,
                        glLoadIdentity, GL_PROJECTION, GL_MODELVIEW, glEnable,
-                       GL_DEPTH_TEST, GL_LIGHTING, GL_LIGHT0, GL_AMBIENT,
-                       GL_DIFFUSE, GL_SPECULAR, GL_POSITION, GL_FRONT,
-                       GL_SHININESS, glMaterialfv, glLightfv, glMaterialf,
-                       glDisable, glTranslatef, glScalef)
+                       GL_DEPTH_TEST, GL_LIGHTING, glDisable, glTranslatef, glScalef)
 from OpenGL.GLU import gluPerspective, gluLookAt
-from gui import create_light_frame, choose_color, create_material_frame, get_coordinates, get_shininess
-from loadFile import draw_model, load_obj
-from light import Light, Material
+from gui.light_frame import create_light_frame
+from gui.material_frame import create_material_frame
+from gui.utils import get_coordinates, get_shininess, choose_color
+from src.load_file import draw_model, load_obj
+from src.light import Light, Material
 import sys
 import math
 import signal
 import tkinter as tk
-from tkinter import ttk, colorchooser
+from tkinter import ttk
 import threading
-import os
 
 keyframes = []
 interpolation_mode = None
@@ -317,9 +315,10 @@ def hide_keyframe_options(keyframe_frame):
 def light_change_handler(change_type: str, *args):
     color = ["ambient", "diffuse", "specular"]
     if change_type in color:
-        color_code = list(choose_color())
-        color_code = [value/255 for value in color_code]
-        color_code.append(1.0)
+        color_code = choose_color()
+        if color_code:
+            color_code = [value/255 for value in color_code]
+            color_code.append(1.0)
 
     if change_type == "ambient":
         light.change_light(ambient=color_code)
@@ -336,9 +335,10 @@ def light_change_handler(change_type: str, *args):
 def material_change_handler(change_type: str, *args):
     color = ["ambient", "diffuse", "specular"]
     if change_type in color:
-        color_code = list(choose_color())
-        color_code = [value/255 for value in color_code]
-        color_code.append(1.0)
+        color_code = choose_color()
+        if color_code:
+            color_code = [value/255 for value in color_code]
+            color_code.append(1.0)
 
     if change_type == "ambient":
         material.change_material(ambient=color_code)
