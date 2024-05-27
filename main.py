@@ -15,7 +15,6 @@ import math
 import signal
 import tkinter as tk
 import threading
-import os
 
 keyframes = []
 interpolation_mode = None
@@ -141,6 +140,18 @@ def update_transformations(frame_slider, transform_mode):
 
     return translate, rotate, scale
 
+def play_animation(frame_slider, root):
+    current_frame = frame_slider.get()
+    max_frame = frame_slider.cget('to')
+
+    def advance_frame():
+        nonlocal current_frame
+        if current_frame <= max_frame:
+            frame_slider.set(current_frame)
+            current_frame += 1
+            root.after(50, advance_frame)  # Adjust the delay (50ms) to control the playback speed
+
+    advance_frame()
 
 def pygame_thread(camera_mode, frame_slider, transform_mode):
     global keyframes, interpolation_mode, translate, rotate, scale
@@ -375,6 +386,9 @@ def create_gui():
     tk.Button(keyframe_frame, text="Odrzuć", command=lambda: hide_keyframe_options(keyframe_frame)).grid(row=7, column=1, sticky=tk.E, padx=5, pady=10)
 
     tk.Button(control_frame, text="Wstaw Klatkę Kluczową", command=lambda: show_keyframe_options(keyframe_frame, keyframe_mode, interpolation_mode)).grid(row=2, column=0, pady=10)
+
+    # Dodanie przycisku "Odtwórz"
+    tk.Button(control_frame, text="Odtwórz", command=lambda: play_animation(frame_slider, root)).grid(row=4, column=0, pady=10)
 
     def start_pygame():
         threading.Thread(target=pygame_thread, args=(camera_mode, frame_slider, transform_mode), daemon=True).start()
