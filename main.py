@@ -6,9 +6,11 @@ from OpenGL.GL import (glClear, GL_COLOR_BUFFER_BIT, GL_DEPTH_BUFFER_BIT,
                        glLoadIdentity, GL_PROJECTION, GL_MODELVIEW, glEnable,
                        GL_DEPTH_TEST, GL_LIGHTING, glDisable, glTranslatef, glScalef)
 from OpenGL.GLU import gluPerspective, gluLookAt
+from gui.control_frame import create_control_frame
 from gui.light_frame import create_light_frame
 from gui.material_frame import create_material_frame
-from gui.utils import get_coordinates, get_shininess, choose_color
+from gui.render_frame import create_render_frame
+from gui.utils import get_coordinates, get_shininess, choose_color, save_keyframe
 from src.load_file import draw_model, load_obj
 from src.light import Light, Material
 import sys
@@ -17,6 +19,7 @@ import signal
 import tkinter as tk
 from tkinter import ttk
 import threading
+from src.render import render
 
 keyframes = []
 interpolation_mode = None
@@ -114,11 +117,11 @@ def update_transformations(frame_slider, transform_mode):
 
     alpha = (current_frame - start_frame) / (end_frame - start_frame)
     translate = [interpolate(start_translate[i], end_translate[i],
-                             alpha, interpolation_mode.get()) for i in range(3)]
+                             alpha, transform_mode.get()) for i in range(3)]
     rotate = [interpolate(start_rotate[i], end_rotate[i],
-                          alpha, interpolation_mode.get()) for i in range(3)]
+                          alpha, transform_mode.get()) for i in range(3)]
     scale = [interpolate(start_scale[i], end_scale[i], alpha,
-                         interpolation_mode.get()) for i in range(3)]
+                         transform_mode.get()) for i in range(3)]
 
     return translate, rotate, scale
 
@@ -139,7 +142,7 @@ def pygame_thread(frame_slider, transform_mode):
 
     # Set up lighting
     material = Material()
-    light = Light(material, ambient=[0.1, 1, 0.1, 1])
+    light = Light(material)
 
     near_render_distance = 0.1
     far_render_distance = 1000
@@ -179,6 +182,8 @@ def pygame_thread(frame_slider, transform_mode):
                     azimuth -= 5  # Look left
                 elif event.key == pygame.K_d:
                     azimuth += 5  # Look right
+                elif event.key == pygame.K_p:  # Save frame when 'P' is pressed
+                    render()
                 # Translacja
                 if transform_mode.get() == "Translation":
                     if event.key in (pygame.K_1, pygame.K_KP1):
@@ -283,33 +288,8 @@ def pygame_thread(frame_slider, transform_mode):
         pygame.time.wait(10)
 
 
-def save_keyframe(frame_slider):
-    global keyframes, translate, rotate, scale
-    current_frame = frame_slider.get()
-    keyframes.append((current_frame, list(
-        translate), list(rotate), list(scale)))
-
-
-def save_keyframe(frame_slider, keyframe_listbox):
-    global keyframes, translate, rotate, scale
-    current_frame = frame_slider.get()
-    keyframes.append((current_frame, list(
-        translate), list(rotate), list(scale)))
-    # Sortuj klatki kluczowe po numerze klatki
-    keyframes.sort(key=lambda kf: kf[0])
-    keyframe_listbox.delete(0, tk.END)  # Wyczyść listę
-    for kf in keyframes:
-        keyframe_listbox.insert(tk.END, f"Klatka {kf[0]}")
-
-
-def show_keyframe_options(keyframe_frame, keyframe_mode, interpolation_mode):
-    keyframe_frame.grid(row=3, column=0, columnspan=2, pady=10)
-    keyframe_mode.set("Translation")
-    interpolation_mode.set("Constant")
-
-
-def hide_keyframe_options(keyframe_frame):
-    keyframe_frame.grid_forget()
+def save_keyframe_handler(frame_slider, keyframe_listbox):
+    save_keyframe(frame_slider, keyframe_listbox, keyframes, translate, rotate, scale)
 
 
 def light_change_handler(change_type: str, *args):
@@ -326,7 +306,6 @@ def light_change_handler(change_type: str, *args):
         light.change_light(diffuse=color_code)
     if change_type == "specular":
         light.change_light(specular=color_code)
-
     if change_type == "position":
         position = get_coordinates(*args)
         light.change_light(position=position)
@@ -346,10 +325,13 @@ def material_change_handler(change_type: str, *args):
         material.change_material(diffuse=color_code)
     if change_type == "specular":
         material.change_material(specular=color_code)
-
     if change_type == "shininess":
         shininess = get_shininess(*args)
         material.change_material(shininess=shininess)
+
+
+def render_handler():
+    render()
 
 
 def create_gui():
@@ -367,6 +349,7 @@ def create_gui():
 
     control_frame = ttk.Frame(notebook)
     control_frame.grid(row=1, column=0, columnspan=2, pady=20)
+    frame_slider, transform_mode = create_control_frame(control_frame, save_keyframe_handler)
 
     light_frame = ttk.Frame(notebook)
     light_frame.grid(row=1, column=0, columnspan=2, pady=20)
@@ -376,50 +359,16 @@ def create_gui():
     material_frame.grid(row=1, column=0, columnspan=2, pady=20)
     create_material_frame(material_frame, material_change_handler)
 
+    render_frame = ttk.Frame(notebook)
+    render_frame.grid(row=1, column=0, columnspan=2, pady=20)
+    create_render_frame(render_frame, render_handler)
+
     notebook.add(control_frame, text='Klatki')
     notebook.add(light_frame, text="Światło")
     notebook.add(material_frame, text="Materiał")
+    notebook.add(render_frame, text="Render")
 
     notebook.pack(expand=1, fill='both')
-
-    frame_slider = tk.Scale(control_frame, from_=0,
-                            to=100, orient=tk.HORIZONTAL, label="Klatki")
-    frame_slider.grid(row=1, column=0, pady=5)
-
-    keyframe_label = tk.Label(control_frame, text="Keyframes: []")
-    keyframe_label.grid(row=2, column=0, pady=5)
-
-    keyframe_listbox = tk.Listbox(control_frame, height=5)
-    keyframe_listbox.grid(row=3, column=0, pady=5)
-
-    keyframe_mode = tk.StringVar()
-    interpolation_mode = tk.StringVar()
-    transform_mode = tk.StringVar(value="Translation")
-
-    keyframe_frame = tk.Frame(control_frame)
-    tk.Label(keyframe_frame, text="Wybierz tryb przekształcenia:").grid(
-        row=0, column=0, pady=5)
-    tk.Radiobutton(keyframe_frame, text="Translacja", variable=transform_mode,
-                   value="Translation").grid(row=1, column=0, sticky=tk.W, pady=2)
-    tk.Radiobutton(keyframe_frame, text="Rotacja", variable=transform_mode,
-                   value="Rotation").grid(row=2, column=0, sticky=tk.W, pady=2)
-    tk.Radiobutton(keyframe_frame, text="Skalowanie", variable=transform_mode,
-                   value="Scaling").grid(row=3, column=0, sticky=tk.W, pady=2)
-
-    tk.Label(keyframe_frame, text="Wybierz interpolację:").grid(
-        row=4, column=0, pady=5)
-    tk.Radiobutton(keyframe_frame, text="Stała", variable=interpolation_mode,
-                   value="Constant").grid(row=5, column=0, sticky=tk.W, pady=2)
-    tk.Radiobutton(keyframe_frame, text="Liniowa", variable=interpolation_mode,
-                   value="Linear").grid(row=6, column=0, sticky=tk.W, pady=2)
-
-    tk.Button(keyframe_frame, text="Save", command=lambda: [save_keyframe(frame_slider, keyframe_listbox), hide_keyframe_options(
-        keyframe_frame)]).grid(row=7, column=0, sticky=tk.W, padx=5, pady=10)
-    tk.Button(keyframe_frame, text="Odrzuć", command=lambda: hide_keyframe_options(
-        keyframe_frame)).grid(row=7, column=1, sticky=tk.E, padx=5, pady=10)
-
-    tk.Button(control_frame, text="Wstaw Klatkę Kluczową", command=lambda: show_keyframe_options(
-        keyframe_frame, keyframe_mode, interpolation_mode)).grid(row=2, column=0, pady=10)
 
     def start_pygame():
         threading.Thread(target=pygame_thread, args=(
