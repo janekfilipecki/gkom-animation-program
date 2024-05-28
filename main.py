@@ -11,7 +11,9 @@ from gui.light_frame import create_light_frame
 from gui.material_frame import create_material_frame
 from gui.render_frame import create_render_frame
 from gui.utils import get_coordinates, get_shininess, choose_color, save_keyframe
-from src.load_file import draw_model, load_obj
+from src.camera import Camera
+from src.interpolation import interpolate
+from src.load_file import load_obj
 from src.light import Light, Material
 import sys
 import math
@@ -19,7 +21,7 @@ import signal
 import tkinter as tk
 from tkinter import ttk
 import threading
-from src.render import render
+from src.render import save_frame, save_video
 
 keyframes = []
 interpolation_mode = None
@@ -27,11 +29,11 @@ translate = [0, 0, 0]
 rotate = [0, 0, 0]
 scale = [1, 1, 1]
 
+all_frames = {}
 
 def draw_grid(zoom, fov, aspect):
     """Draws a simple grid on the XY plane, adaptive to the view range."""
-    glDisable(GL_LIGHTING)  # Disable lighting to ensure
-    # the grid color is not affected
+    glDisable(GL_LIGHTING)  # Disable lighting to ensure the grid color is not affected
 
     glColor3fv((1, 0, 0))  # Set grid color to red
 
@@ -60,27 +62,6 @@ def draw_grid(zoom, fov, aspect):
 def handle_exit(signal, frame):
     pygame.quit()
     sys.exit(0)
-
-
-def interpolate(start, end, alpha, mode):
-    if mode == "Linear":
-        return start + (end - start) * alpha
-    return start
-
-
-def apply_transformations(transform, alpha, mode):
-    translate = [interpolate(transform[0][i], transform[1]
-                             [i], alpha, mode) for i in range(3)]
-    rotate = [interpolate(transform[2][i], transform[3]
-                          [i], alpha, mode) for i in range(3)]
-    scale = [interpolate(transform[4][i], transform[5][i],
-                         alpha, mode) for i in range(3)]
-
-    glTranslatef(*translate)
-    glRotatef(rotate[0], 1, 0, 0)
-    glRotatef(rotate[1], 0, 1, 0)
-    glRotatef(rotate[2], 0, 0, 1)
-    glScalef(*scale)
 
 
 def update_transformations(frame_slider, transform_mode):
@@ -117,17 +98,17 @@ def update_transformations(frame_slider, transform_mode):
 
     alpha = (current_frame - start_frame) / (end_frame - start_frame)
     translate = [interpolate(start_translate[i], end_translate[i],
-                             alpha, transform_mode.get()) for i in range(3)]
+                             alpha, interpolation_mode.get()) for i in range(3)]
     rotate = [interpolate(start_rotate[i], end_rotate[i],
-                          alpha, transform_mode.get()) for i in range(3)]
+                          alpha, interpolation_mode.get()) for i in range(3)]
     scale = [interpolate(start_scale[i], end_scale[i], alpha,
-                         transform_mode.get()) for i in range(3)]
+                         interpolation_mode.get()) for i in range(3)]
 
     return translate, rotate, scale
 
 
 def pygame_thread(frame_slider, transform_mode):
-    global keyframes, interpolation_mode, translate, rotate, scale, material, light
+    global keyframes, interpolation_mode, translate, rotate, scale, material, light, all_frames
 
     file_path = sys.argv[1] if len(sys.argv) > 1 else None
     pygame.init()
@@ -143,26 +124,17 @@ def pygame_thread(frame_slider, transform_mode):
     # Set up lighting
     material = Material()
     light = Light(material)
+    camera = Camera()
 
     near_render_distance = 0.1
     far_render_distance = 1000
 
-    # Camera parameters
-    zoom = 20  # Initial zoom distance
-    azimuth = 0  # Initial azimuth angle
-    elevation = 20  # Initial elevation angle
-    fov = 45  # Field of view
-
-    vertices = []
-    faces = []
-    normals = []
     if file_path:
-        vertices, faces, normals = load_obj(file_path)
-
-    angle = 0
+        model = load_obj(file_path)
 
     grid = True
     running = True
+
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -171,19 +143,18 @@ def pygame_thread(frame_slider, transform_mode):
                 if event.key == pygame.K_g:
                     grid = not grid
                 if event.key == pygame.K_UP:
-                    zoom -= 1  # Move camera closer to the origin
+                    camera.zoom -= 1  # Move camera closer to the origin
                 elif event.key == pygame.K_DOWN:
-                    zoom += 1  # Move camera further from the origin
+                    camera.zoom += 1  # Move camera further from the origin
                 elif event.key == pygame.K_w:
-                    elevation += 5  # Look up
+                    camera.elevation += 5  # Look up
                 elif event.key == pygame.K_s:
-                    elevation -= 5  # Look down
+                    camera.elevation -= 5  # Look down
                 elif event.key == pygame.K_a:
-                    azimuth -= 5  # Look left
+                    camera.azimuth -= 5  # Look left
                 elif event.key == pygame.K_d:
-                    azimuth += 5  # Look right
-                elif event.key == pygame.K_p:  # Save frame when 'P' is pressed
-                    render()
+                    camera.azimuth += 5  # Look right
+
                 # Translacja
                 if transform_mode.get() == "Translation":
                     if event.key in (pygame.K_1, pygame.K_KP1):
@@ -237,21 +208,19 @@ def pygame_thread(frame_slider, transform_mode):
                         scale[2] -= 0.1
 
         # Ensure elevation is within -90 to 90 degrees to avoid gimbal lock
-        elevation = max(-90, min(90, elevation))
+        camera.elevation = max(-90, min(90, camera.elevation))
 
         # Convert spherical coordinates to Cartesian coordinates for the camera
-        eye_x = zoom * math.cos(math.radians(elevation)) * \
-            math.cos(math.radians(azimuth))
-        eye_y = zoom * math.cos(math.radians(elevation)) * \
-            math.sin(math.radians(azimuth))
-        eye_z = zoom * math.sin(math.radians(elevation))
+        eye_x = camera.calculate_eye_x()
+        eye_y = camera.calculate_eye_y()
+        eye_z = camera.calculate_eye_z()
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
         # Set the perspective projection
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
-        gluPerspective(fov, (display[0] / display[1]),
+        gluPerspective(camera.fov, (display[0] / display[1]),
                        near_render_distance, far_render_distance)
 
         light.setup_lighting()
@@ -265,7 +234,7 @@ def pygame_thread(frame_slider, transform_mode):
 
         # Draw the grid
         if grid:
-            draw_grid(zoom, fov, display[0] / display[1])
+            draw_grid(camera.zoom, camera.fov, display[0] / display[1])
 
         # Apply transformations and draw the model
         glPushMatrix()
@@ -278,10 +247,12 @@ def pygame_thread(frame_slider, transform_mode):
         glRotatef(rotate[2], 0, 0, 1)
         glScalef(*scale)
 
-        draw_model(vertices, faces, normals)
+        model.draw_model()
         glPopMatrix()
 
-        angle += 5  # Increment the rotation angle
+        # Capture and save the current frame
+        frame = save_frame()
+        all_frames[frame_slider.get()] = frame
 
         # Update display
         pygame.display.flip()
@@ -331,7 +302,7 @@ def material_change_handler(change_type: str, *args):
 
 
 def render_handler():
-    render()
+    save_video(dict(sorted(all_frames.items())).values())
 
 
 def create_gui():
@@ -349,7 +320,7 @@ def create_gui():
 
     control_frame = ttk.Frame(notebook)
     control_frame.grid(row=1, column=0, columnspan=2, pady=20)
-    frame_slider, transform_mode = create_control_frame(control_frame, save_keyframe_handler)
+    frame_slider, transform_mode, interpolation_mode = create_control_frame(control_frame, save_keyframe_handler)
 
     light_frame = ttk.Frame(notebook)
     light_frame.grid(row=1, column=0, columnspan=2, pady=20)

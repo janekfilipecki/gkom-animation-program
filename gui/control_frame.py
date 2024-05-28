@@ -42,4 +42,4 @@ def create_control_frame(frame, save_keyframe_handler):
     tk.Button(frame, text="Wstaw Klatkę Kluczową", command=lambda: show_keyframe_options(
         keyframe_frame, keyframe_mode, interpolation_mode)).grid(row=2, column=0, pady=10)
 
-    return frame_slider, transform_mode
+    return frame_slider, transform_mode, interpolation_mode

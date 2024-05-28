@@ -1,15 +1,20 @@
+import imageio
+import numpy as np
+from OpenGL.GL import (glPixelStorei, GL_PACK_ALIGNMENT, glReadPixels,
+                       GL_RGB, GL_UNSIGNED_BYTE)
 from PIL import Image
-from OpenGL.GL import glPixelStorei, GL_PACK_ALIGNMENT, glReadPixels, GL_RGB, GL_UNSIGNED_BYTE
-from OpenGL.GLUT import glutSwapBuffers
-
-width = 800
-height = 600
 
 
-def render(filename="aaa.png"):
+def save_frame():
     glPixelStorei(GL_PACK_ALIGNMENT, 1)
-    data = glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE)
-    image = Image.frombytes("RGB", (width, height), data)
-    image = image.transpose(Image.FLIP_TOP_BOTTOM)  # OpenGL's origin is at the bottom left corner
-    image.save(filename)
-    print(f"Frame saved as {filename}")
+    data = glReadPixels(0, 0, 800, 600, GL_RGB, GL_UNSIGNED_BYTE)
+    image = Image.frombytes("RGB", (800, 600), data)
+    image = image.transpose(Image.FLIP_TOP_BOTTOM)
+    return image
+
+
+def save_video(frames, filename="animation.mp4"):
+    writer = imageio.get_writer(filename, format='mp4', mode='I', fps=20)
+    for frame in frames:
+        writer.append_data(np.asarray(frame))
+    writer.close()

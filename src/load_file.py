@@ -3,15 +3,22 @@ from OpenGL.GL import (glBegin, glEnd, glVertex3fv, GL_TRIANGLES,
 import math
 
 
-def draw_model(vertices, faces, normals):
-    """Draw the loaded model."""
-    glBegin(GL_TRIANGLES)
-    for i, face in enumerate(faces):
-        normal = normals[i]
-        for vertex_index in face:
-            glNormal3fv(normal)
-            glVertex3fv(vertices[vertex_index])
-    glEnd()
+class Model:
+    def __init__(self, vertices, faces, normals):
+        self.vertices = vertices
+        self.faces = faces
+        self.normals = normals
+
+
+    def draw_model(self):
+        """Draw the loaded model."""
+        glBegin(GL_TRIANGLES)
+        for i, face in enumerate(self.faces):
+            normal = self.normals[i]
+            for vertex_index in face:
+                glNormal3fv(normal)
+                glVertex3fv(self.vertices[vertex_index])
+        glEnd()
 
 
 def load_obj(file_path):
@@ -31,7 +38,7 @@ def load_obj(file_path):
                 faces.append(face)
     if not normals:
         normals = calculate_normals(vertices, faces)
-    return vertices, faces, normals
+    return Model(vertices, faces, normals)
 
 
 def calculate_normals(vertices, faces):
