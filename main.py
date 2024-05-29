@@ -138,16 +138,15 @@ def pygame_thread(frame_slider, transform_mode, interpolation_mode):
     material = Material()
     light = Light(material)
     camera = Camera()
-    keyframe = Keyframe(frame_slider.get(), interpolation_mode.get(), translate, rotate, scale)
 
     near_render_distance = 0.1
     far_render_distance = 1000
 
     grid = True
-    isKeyframe = False
     running = True
 
     while running:
+        keyframe = Keyframe(frame_slider.get(), interpolation_mode.get(), translate, rotate, scale)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
@@ -158,18 +157,13 @@ def pygame_thread(frame_slider, transform_mode, interpolation_mode):
                     camera.change_camera_position(event)
                 # Translacja
                 if transform_mode.get() == "Translation":
-                    isKeyframe = True
                     keyframe.change_translation(event)
                 # Rotacja
                 elif transform_mode.get() == "Rotation":
-                    isKeyframe = True
                     keyframe.change_rotation(event)
                 # Skalowanie
                 elif transform_mode.get() == "Scaling":
-                    isKeyframe = True
                     keyframe.change_scale(event)
-                else:
-                    isKeyframe = False
 
         translate, rotate, scale = keyframe.translation, keyframe.rotation, keyframe.scale
         # Ensure elevation is within -90 to 90 degrees to avoid gimbal lock
@@ -203,9 +197,8 @@ def pygame_thread(frame_slider, transform_mode, interpolation_mode):
 
         # Apply transformations and draw the model
         glPushMatrix()
-        if keyframes and not isKeyframe:
+        if keyframes:
             keyframe.translation, keyframe.rotation, keyframe.scale = update_transformations(frame_slider)
-            translate, rotate, scale = keyframe.translation, keyframe.rotation, keyframe.scale
 
         glTranslatef(*translate)
         glRotatef(rotate[0], 1, 0, 0)
