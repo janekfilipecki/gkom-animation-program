@@ -10,7 +10,6 @@ from OpenGL.GLU import gluPerspective, gluLookAt
 from gui.control_frame import create_control_frame
 from gui.light_frame import create_light_frame
 from gui.material_frame import create_material_frame
-from gui.render_frame import create_render_frame
 from gui.utils import get_coordinates, get_shininess, choose_color, save_keyframe
 from src.camera import Camera
 from src.interpolation import interpolate
@@ -30,6 +29,8 @@ interpolation_mode = None
 translate = [0, 0, 0]
 rotate = [0, 0, 0]
 scale = [1, 1, 1]
+
+rendering = False
 
 all_frames = {}
 
@@ -119,7 +120,7 @@ def update_transformations(frame_slider):
 
 
 def pygame_thread(frame_slider, transform_mode, interpolation_mode):
-    global keyframes, translate, rotate, scale, material, light, all_frames
+    global keyframes, translate, rotate, scale, material, light, all_frames, rendering
 
     file_path = sys.argv[1] if len(sys.argv) > 1 else None
     pygame.init()
@@ -146,6 +147,8 @@ def pygame_thread(frame_slider, transform_mode, interpolation_mode):
     running = True
 
     while running:
+        if rendering:
+            print("pygame: rendering set true")
         keyframe = Keyframe(frame_slider.get(), interpolation_mode.get(), translate, rotate, scale)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -192,7 +195,7 @@ def pygame_thread(frame_slider, transform_mode, interpolation_mode):
                   0, 0, 1)             # Up vector (z-axis)
 
         # Draw the grid
-        if grid:
+        if grid and not rendering:
             draw_grid(camera.zoom, camera.fov, display[0] / display[1])
 
         # Apply transformations and draw the model
@@ -210,8 +213,17 @@ def pygame_thread(frame_slider, transform_mode, interpolation_mode):
         glPopMatrix()
 
         # Capture and save the current frame
-        frame = save_frame()
-        all_frames[frame_slider.get()] = frame
+        if rendering:
+            print(f"pygame: capturing frame {frame_slider.get()}")
+            frame_idx = frame_slider.get()
+            print(frame_idx)
+            frame = save_frame()
+            all_frames[frame_idx] = frame
+            if frame_slider.get() < 100:
+                frame_slider.set(frame_idx + 1)
+            else:
+                rendering = False
+                save_video(dict(sorted(all_frames.items())).values())
 
         # Update display
         pygame.display.flip()
@@ -266,8 +278,10 @@ def material_change_handler(change_type: str, *args):
         material.change_material(shininess=shininess)
 
 
-def render_handler():
-    save_video(dict(sorted(all_frames.items())).values())
+def render_handler(frame_slider):
+    global rendering
+    rendering = True
+    frame_slider.set(0)
 
 
 def create_gui():
@@ -286,7 +300,7 @@ def create_gui():
     control_frame = ttk.Frame(notebook)
     control_frame.grid(row=1, column=0, columnspan=2, pady=20)
     frame_slider, transform_mode, interpolation_mode = create_control_frame(
-        control_frame, save_keyframe_handler)
+        control_frame, save_keyframe_handler, render_handler)
 
     light_frame = ttk.Frame(notebook)
     light_frame.grid(row=1, column=0, columnspan=2, pady=20)
@@ -296,14 +310,9 @@ def create_gui():
     material_frame.grid(row=1, column=0, columnspan=2, pady=20)
     create_material_frame(material_frame, material_change_handler)
 
-    render_frame = ttk.Frame(notebook)
-    render_frame.grid(row=1, column=0, columnspan=2, pady=20)
-    create_render_frame(render_frame, render_handler)
-
     notebook.add(control_frame, text='Klatki')
     notebook.add(light_frame, text="Światło")
     notebook.add(material_frame, text="Materiał")
-    notebook.add(render_frame, text="Render")
 
     notebook.pack(expand=1, fill='both')
 

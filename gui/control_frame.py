@@ -2,7 +2,7 @@ import tkinter as tk
 from gui.utils import hide_keyframe_options, show_keyframe_options
 
 
-def create_control_frame(frame, save_keyframe_handler):
+def create_control_frame(frame, save_keyframe_handler, render_handler):
     frame_slider = tk.Scale(frame, from_=0,
                             to=100, orient=tk.HORIZONTAL, label="Klatki")
     frame_slider.grid(row=1, column=0, pady=5)
@@ -41,5 +41,8 @@ def create_control_frame(frame, save_keyframe_handler):
 
     tk.Button(frame, text="Wstaw Klatkę Kluczową", command=lambda: show_keyframe_options(
         keyframe_frame, keyframe_mode, interpolation_mode)).grid(row=2, column=0, pady=10)
+
+    render_button = tk.Button(frame, text="Renderuj animację", command=lambda: render_handler(frame_slider))
+    render_button.grid(row=8, column=0, columnspan=2, padx=10, pady=10)
 
     return frame_slider, transform_mode, interpolation_mode
