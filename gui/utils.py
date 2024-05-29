@@ -1,5 +1,8 @@
+import copy
 import tkinter as tk
 from tkinter import colorchooser, messagebox
+
+from src.keyframe import Keyframe
 
 
 def choose_color():
@@ -27,21 +30,17 @@ def get_shininess(value):
         messagebox.showerror("Błąd", "Wprowadź prawidłową liczbę z zakresu [0, 128].")
 
 
-def save_keyframe(frame_slider, keyframes, translate, rotate, scale):
+def save_keyframe(frame_slider, keyframe_listbox, interpolation_mode,
+                  keyframes, translate, rotate, scale):
     current_frame = frame_slider.get()
-    keyframes.append((current_frame, list(
-        translate), list(rotate), list(scale)))
-
-
-def save_keyframe(frame_slider, keyframe_listbox, keyframes, translate, rotate, scale):
-    current_frame = frame_slider.get()
-    keyframes.append((current_frame, list(
-        translate), list(rotate), list(scale)))
+    keyframe = Keyframe(current_frame, interpolation_mode.get(), list(translate),
+                        list(rotate), list(scale))
+    keyframes.append(keyframe)
     # Sortuj klatki kluczowe po numerze klatki
-    keyframes.sort(key=lambda kf: kf[0])
+    keyframes.sort(key=lambda kf: kf.frame_idx)
     keyframe_listbox.delete(0, tk.END)  # Wyczyść listę
     for kf in keyframes:
-        keyframe_listbox.insert(tk.END, f"Klatka {kf[0]}")
+        keyframe_listbox.insert(tk.END, f"Klatka {kf.frame_idx}")
 
 
 def show_keyframe_options(keyframe_frame, keyframe_mode, interpolation_mode):

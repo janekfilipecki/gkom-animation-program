@@ -1,3 +1,4 @@
+import copy
 import pygame
 from pygame.locals import DOUBLEBUF, OPENGL
 from OpenGL.GL import (glClear, GL_COLOR_BUFFER_BIT, GL_DEPTH_BUFFER_BIT,
@@ -13,6 +14,7 @@ from gui.render_frame import create_render_frame
 from gui.utils import get_coordinates, get_shininess, choose_color, save_keyframe
 from src.camera import Camera
 from src.interpolation import interpolate
+from src.keyframe import Keyframe
 from src.load_file import load_obj
 from src.light import Light, Material
 import sys
@@ -64,8 +66,8 @@ def handle_exit(signal, frame):
     sys.exit(0)
 
 
-def update_transformations(frame_slider, transform_mode):
-    global keyframes, interpolation_mode, translate, rotate, scale
+def update_transformations(frame_slider):
+    global keyframes, translate, rotate, scale
 
     if not keyframes:
         return translate, rotate, scale
@@ -75,7 +77,7 @@ def update_transformations(frame_slider, transform_mode):
     next_keyframe = None
 
     for i, keyframe in enumerate(keyframes):
-        frame, _, _, _ = keyframe
+        frame = keyframe.frame_idx
         if frame <= current_frame:
             prev_keyframe = keyframe
         if frame >= current_frame and next_keyframe is None:
@@ -90,25 +92,34 @@ def update_transformations(frame_slider, transform_mode):
     if next_keyframe is None:
         next_keyframe = keyframes[-1]
 
-    start_frame, start_translate, start_rotate, start_scale = prev_keyframe
-    end_frame, end_translate, end_rotate, end_scale = next_keyframe
+    start_frame = prev_keyframe.frame_idx
+    start_translate = prev_keyframe.translation
+    start_rotate = prev_keyframe.rotation
+    start_scale = prev_keyframe.scale
+
+    end_frame = next_keyframe.frame_idx
+    end_translate = next_keyframe.translation
+    end_rotate = next_keyframe.rotation
+    end_scale = next_keyframe.scale
+
+    interpolation_mode = next_keyframe.interpolation_mode
 
     if start_frame == end_frame:
         return start_translate, start_rotate, start_scale
 
     alpha = (current_frame - start_frame) / (end_frame - start_frame)
     translate = [interpolate(start_translate[i], end_translate[i],
-                             alpha, interpolation_mode.get()) for i in range(3)]
+                             alpha, interpolation_mode) for i in range(3)]
     rotate = [interpolate(start_rotate[i], end_rotate[i],
-                          alpha, interpolation_mode.get()) for i in range(3)]
+                          alpha, interpolation_mode) for i in range(3)]
     scale = [interpolate(start_scale[i], end_scale[i], alpha,
-                         interpolation_mode.get()) for i in range(3)]
+                         interpolation_mode) for i in range(3)]
 
     return translate, rotate, scale
 
 
-def pygame_thread(frame_slider, transform_mode):
-    global keyframes, interpolation_mode, translate, rotate, scale, material, light, all_frames
+def pygame_thread(frame_slider, transform_mode, interpolation_mode):
+    global keyframes, translate, rotate, scale, material, light, all_frames
 
     file_path = sys.argv[1] if len(sys.argv) > 1 else None
     pygame.init()
@@ -120,19 +131,20 @@ def pygame_thread(frame_slider, transform_mode):
 
     # Set up the signal handler for graceful exit
     # signal.signal(signal.SIGINT, handle_exit)
+    if file_path:
+        model = load_obj(file_path)
 
-    # Set up lighting
+    # Set up
     material = Material()
     light = Light(material)
     camera = Camera()
+    keyframe = Keyframe(frame_slider.get(), interpolation_mode.get(), translate, rotate, scale)
 
     near_render_distance = 0.1
     far_render_distance = 1000
 
-    if file_path:
-        model = load_obj(file_path)
-
     grid = True
+    isKeyframe = False
     running = True
 
     while running:
@@ -142,71 +154,24 @@ def pygame_thread(frame_slider, transform_mode):
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_g:
                     grid = not grid
-                if event.key == pygame.K_UP:
-                    camera.zoom -= 1  # Move camera closer to the origin
-                elif event.key == pygame.K_DOWN:
-                    camera.zoom += 1  # Move camera further from the origin
-                elif event.key == pygame.K_w:
-                    camera.elevation += 5  # Look up
-                elif event.key == pygame.K_s:
-                    camera.elevation -= 5  # Look down
-                elif event.key == pygame.K_a:
-                    camera.azimuth -= 5  # Look left
-                elif event.key == pygame.K_d:
-                    camera.azimuth += 5  # Look right
-
+                else:
+                    camera.change_camera_position(event)
                 # Translacja
                 if transform_mode.get() == "Translation":
-                    if event.key in (pygame.K_1, pygame.K_KP1):
-                        translate[0] += 0.1  # Przesunięcie w osi X
-                    elif event.key in (pygame.K_2, pygame.K_KP2):
-                        translate[1] += 0.1  # Przesunięcie w osi Y
-                    elif event.key in (pygame.K_3, pygame.K_KP3):
-                        translate[2] += 0.1  # Przesunięcie w osi Z
-
-                    elif event.key in (pygame.K_4, pygame.K_KP4):
-                        # Przesunięcie w osi X w przeciwną stronę
-                        translate[0] -= 0.1
-                    elif event.key in (pygame.K_5, pygame.K_KP5):
-                        # Przesunięcie w osi Y w przeciwną stronę
-                        translate[1] -= 0.1
-                    elif event.key in (pygame.K_6, pygame.K_KP6):
-                        # Przesunięcie w osi Z w przeciwną stronę
-                        translate[2] -= 0.1
+                    isKeyframe = True
+                    keyframe.change_translation(event)
                 # Rotacja
                 elif transform_mode.get() == "Rotation":
-                    if event.key in (pygame.K_1, pygame.K_KP1):
-                        rotate[0] += 5  # Obrót wokół osi X
-                    elif event.key in (pygame.K_2, pygame.K_KP2):
-                        rotate[1] += 5  # Obrót wokół osi Y
-                    elif event.key in (pygame.K_3, pygame.K_KP3):
-                        rotate[2] += 5  # Obrót wokół osi Z
-
-                    elif event.key in (pygame.K_4, pygame.K_KP4):
-                        rotate[0] -= 5  # Obrót wokół osi X w przeciwną stronę
-                    elif event.key in (pygame.K_5, pygame.K_KP5):
-                        rotate[1] -= 5  # Obrót wokół osi Y w przeciwną stronę
-                    elif event.key in (pygame.K_6, pygame.K_KP6):
-                        rotate[2] -= 5  # Obrót wokół osi Z w przeciwną stronę
+                    isKeyframe = True
+                    keyframe.change_rotation(event)
                 # Skalowanie
                 elif transform_mode.get() == "Scaling":
-                    if event.key in (pygame.K_1, pygame.K_KP1):
-                        scale[0] += 1  # Skalowanie w osi X
-                    elif event.key in (pygame.K_2, pygame.K_KP2):
-                        scale[1] += 1  # Skalowanie w osi Y
-                    elif event.key in (pygame.K_3, pygame.K_KP3):
-                        scale[2] += 1  # Skalowanie w osi Z
+                    isKeyframe = True
+                    keyframe.change_scale(event)
+                else:
+                    isKeyframe = False
 
-                    elif event.key in (pygame.K_4, pygame.K_KP4):
-                        # Skalowanie w osi X w przeciwną stronę
-                        scale[0] -= 0.1
-                    elif event.key in (pygame.K_5, pygame.K_KP5):
-                        # Skalowanie w osi Y w przeciwną stronę
-                        scale[1] -= 0.1
-                    elif event.key in (pygame.K_6, pygame.K_KP6):
-                        # Skalowanie w osi Z w przeciwną stronę
-                        scale[2] -= 0.1
-
+        translate, rotate, scale = keyframe.translation, keyframe.rotation, keyframe.scale
         # Ensure elevation is within -90 to 90 degrees to avoid gimbal lock
         camera.elevation = max(-90, min(90, camera.elevation))
 
@@ -238,9 +203,10 @@ def pygame_thread(frame_slider, transform_mode):
 
         # Apply transformations and draw the model
         glPushMatrix()
-        if keyframes:
-            translate, rotate, scale = update_transformations(
-                frame_slider, transform_mode)
+        if keyframes and not isKeyframe:
+            keyframe.translation, keyframe.rotation, keyframe.scale = update_transformations(frame_slider)
+            translate, rotate, scale = keyframe.translation, keyframe.rotation, keyframe.scale
+
         glTranslatef(*translate)
         glRotatef(rotate[0], 1, 0, 0)
         glRotatef(rotate[1], 0, 1, 0)
@@ -258,9 +224,15 @@ def pygame_thread(frame_slider, transform_mode):
         pygame.display.flip()
         pygame.time.wait(10)
 
+    for kf in keyframes:
+        print(kf)
 
-def save_keyframe_handler(frame_slider, keyframe_listbox):
-    save_keyframe(frame_slider, keyframe_listbox, keyframes, translate, rotate, scale)
+
+def save_keyframe_handler(frame_slider, keyframe_listbox, interpolation_mode):
+    save_keyframe(frame_slider, keyframe_listbox, interpolation_mode,
+                  keyframes, translate, rotate, scale)
+    for keyframe in keyframes:
+        print(keyframe)
 
 
 def light_change_handler(change_type: str, *args):
@@ -320,7 +292,8 @@ def create_gui():
 
     control_frame = ttk.Frame(notebook)
     control_frame.grid(row=1, column=0, columnspan=2, pady=20)
-    frame_slider, transform_mode, interpolation_mode = create_control_frame(control_frame, save_keyframe_handler)
+    frame_slider, transform_mode, interpolation_mode = create_control_frame(
+        control_frame, save_keyframe_handler)
 
     light_frame = ttk.Frame(notebook)
     light_frame.grid(row=1, column=0, columnspan=2, pady=20)
@@ -343,7 +316,7 @@ def create_gui():
 
     def start_pygame():
         threading.Thread(target=pygame_thread, args=(
-            frame_slider, transform_mode), daemon=True).start()
+            frame_slider, transform_mode, interpolation_mode), daemon=True).start()
 
     root.after(100, start_pygame)
 

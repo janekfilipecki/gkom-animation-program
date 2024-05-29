@@ -34,7 +34,7 @@ def create_control_frame(frame, save_keyframe_handler):
     tk.Radiobutton(keyframe_frame, text="Liniowa", variable=interpolation_mode,
                    value="Linear").grid(row=6, column=0, sticky=tk.W, pady=2)
 
-    tk.Button(keyframe_frame, text="Save", command=lambda: [save_keyframe_handler(frame_slider, keyframe_listbox), hide_keyframe_options(
+    tk.Button(keyframe_frame, text="Save", command=lambda: [save_keyframe_handler(frame_slider, keyframe_listbox, interpolation_mode), hide_keyframe_options(
         keyframe_frame)]).grid(row=7, column=0, sticky=tk.W, padx=5, pady=10)
     tk.Button(keyframe_frame, text="Odrzuć", command=lambda: hide_keyframe_options(
         keyframe_frame)).grid(row=7, column=1, sticky=tk.E, padx=5, pady=10)
