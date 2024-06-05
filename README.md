@@ -17,24 +17,50 @@
 ## Szczegóły implementacji
 ### main.py 
     W głównej pętli programu, która jest obsługiwana przez wątek Pygame,
-    symulacja graficzna jest ciągle odświeżana na ekranie. Program nasłuchuje
-    zdarzeń interakcji użytkownika (np. naciśnięcie klawiszy, zamknięcie okna),
-    które mogą wpływać na transformacje obiektów (translacja, rotacja, skalowanie)
-    oraz na ustawienia kamery i siatki. W tle, każdy ruch lub zmiana jest synchronizowana
-    z suwakiem klatek, pozwalając na płynną animację między zdefiniowanymi klatkami kluczowymi
-    poprzez interpolację. Równolegle, interfejs użytkownika Tkinter obsługuje kontrolki animacji,
-    światła i materiału, które są zintegrowane z renderowanym środowiskiem w Pygame.
+    symulacja graficzna jest ciągle odświeżana na ekranie. Program 
+    nasłuchujezdarzeń interakcji użytkownika (np. naciśnięcie klawiszy, 
+    zamknięcie okna),które mogą wpływać na transformacje obiektów 
+    (translacja, rotacja, skalowanie) oraz na ustawienia kamery i siatki. 
+    W tle, każdy ruch lub zmiana jest synchronizowana z suwakiem klatek, 
+    pozwalając na płynną animację między zdefiniowanymi klatkami kluczowymi
+    poprzez interpolację. Równolegle, interfejs użytkownika Tkinter 
+    obsługuje kontrolki animacji, światła i materiału, które są zintegrowane 
+    z renderowanym środowiskiem w Pygame.
 
 ### moduł src
-    Moduł src zawiera implementację poszczegolnych funkcjonalności programu, min. kamery, interpolacji, klatek kluczowych, sposobu zachowywania ise światła, wczytywania plików oraz renderowania animacji do pliku wideo.
+    Moduł src zawiera implementację poszczegolnych funkcjonalności programu, 
+    min. kamery, interpolacji, klatek kluczowych, sposobu zachowywania ise 
+    światła, wczytywania plików oraz renderowania animacji do pliku wideo.
 
-    camera.py - Klasa Camera umożliwia manipulację widokiem w scenie 3D poprzez regulowanie odległości (zoom), kierunku patrzenia (azymut i elewacja) oraz pola widzenia (FOV), reagując na interakcje użytkownika z klawiaturą.
+    camera.py - Klasa Camera umożliwia manipulację widokiem w scenie 3D poprzez 
+    regulowanie odległości (zoom), kierunku patrzenia (azymut i elewacja) oraz 
+    pola widzenia (FOV), reagując na interakcje użytkownika z klawiaturą.
 
-    keyframe.py - Klasa Keyframe w programie służy do definiowania i zarządzania klatkami kluczowymi w animacji, przechowując informacje o położeniu, orientacji i skali obiektu w danej klatce. Umożliwia ona modyfikację tych parametrów poprzez reakcję na zdarzenia klawiatury, co pozwala na dynamiczne zmiany transformacji obiektów w czasie, wspierając płynne animacje dzięki interpolacji między klatkami.
+    keyframe.py - Klasa Keyframe w programie służy do definiowania i zarządzania 
+    klatkami kluczowymi w animacji, przechowując informacje o położeniu, 
+    orientacji i skali obiektu w danej klatce. Umożliwia ona modyfikację tych 
+    parametrów poprzez reakcję na zdarzenia klawiatury, co pozwala na dynamiczne 
+    zmiany transformacji obiektów w czasie, wspierając płynne animacje dzięki 
+    interpolacji między klatkami.
 
-    light.py - Klasa Material w programie zarządza właściwościami materiału obiektów renderowanych w scenie, takimi jak kolor ambient, diffuse, specular oraz połysk (shininess). Pozwala na dynamiczną zmianę tych właściwości w celu dostosowania wyglądu obiektów w zależności od potrzeb użytkownika i sceny.Klasa Light obsługuje konfigurację oświetlenia w scenie, przechowując i zarządzając właściwościami takimi jak kolor światła ambient, diffuse, specular, oraz jego pozycję. Metoda setup_lighting inicjuje te ustawienia w kontekście graficznym OpenGL, łącząc je z właściwościami materiału, aby efektywnie symulować oświetlenie i cienie w scenie.
+    light.py - Klasa Material w programie zarządza właściwościami materiału 
+    obiektów renderowanych w scenie, takimi jak kolor ambient, diffuse, specular 
+    oraz połysk (shininess). Pozwala na dynamiczną zmianę tych właściwości w celu 
+    dostosowania wyglądu obiektów w zależności od potrzeb użytkownika i sceny. Klasa 
+    Light obsługuje konfigurację oświetlenia w scenie, przechowując i zarządzając 
+    właściwościami takimi jak kolor światła ambient, diffuse, specular, oraz jego 
+    pozycję. Metoda setup_lighting inicjuje te ustawienia w kontekście graficznym 
+    OpenGL, łącząc je z właściwościami materiału, aby efektywnie symulować oświetlenie 
+    i cienie w scenie.
 
-    render.py - Funkcja save_frame() zapisuje bieżący stan renderowanego obrazu w scenie OpenGL, przechwytując piksele z bufora ramki i konwertując je na obraz w formacie RGB, który jest następnie odwracany do odpowiedniej orientacji. Wynikowy obraz może być wykorzystany do dalszej analizy lub jako pojedyncza klatka w animacji. Funkcja save_video() agreguje serię obrazów w formie klatek animacji i zapisuje je do pliku wideo w formacie MP4 z określoną liczbą klatek na sekundę (FPS). Ta metoda umożliwia łatwe tworzenie plików wideo z sekwencji renderowanych klatek, co jest przydatne w produkcji wizualizacji i animacji 3D.
+    render.py - Funkcja save_frame() zapisuje bieżący stan renderowanego obrazu 
+    w scenie OpenGL, przechwytując piksele z bufora ramki i konwertując je na 
+    obraz w formacie RGB, który jest następnie odwracany do odpowiedniej orientacji. 
+    Wynikowy obraz może być wykorzystany do dalszej analizy lub jako pojedyncza klatka 
+    w animacji. Funkcja save_video() agreguje serię obrazów w formie klatek animacji i 
+    zapisuje je do pliku wideo w formacie MP4 z określoną liczbą klatek na sekundę (FPS). 
+    Ta metoda umożliwia łatwe tworzenie plików wideo z sekwencji renderowanych klatek, 
+    co jest przydatne w produkcji wizualizacji i animacji 3D.
 
 ## Instrukcja użytkownika
 ### Uruchamianie programu:
