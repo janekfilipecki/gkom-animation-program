@@ -16,7 +16,14 @@
     7. Możliwość renderu animacji do pliku wideo.
 ## Szczegóły implementacji
 ### main.py 
-    W głównej pętli programu, która jest obsługiwana przez wątek Pygame, symulacja graficzna jest ciągle odświeżana na ekranie. Program nasłuchuje zdarzeń interakcji użytkownika (np. naciśnięcie klawiszy, zamknięcie okna), które mogą wpływać na transformacje obiektów (translacja, rotacja, skalowanie) oraz na ustawienia kamery i siatki. W tle, każdy ruch lub zmiana jest synchronizowana z suwakiem klatek, pozwalając na płynną animację między zdefiniowanymi klatkami kluczowymi poprzez interpolację. Równolegle, interfejs użytkownika Tkinter obsługuje kontrolki animacji, światła i materiału, które są zintegrowane z renderowanym środowiskiem w Pygame.
+    W głównej pętli programu, która jest obsługiwana przez wątek Pygame,
+    symulacja graficzna jest ciągle odświeżana na ekranie. Program nasłuchuje
+    zdarzeń interakcji użytkownika (np. naciśnięcie klawiszy, zamknięcie okna),
+    które mogą wpływać na transformacje obiektów (translacja, rotacja, skalowanie)
+    oraz na ustawienia kamery i siatki. W tle, każdy ruch lub zmiana jest synchronizowana
+    z suwakiem klatek, pozwalając na płynną animację między zdefiniowanymi klatkami kluczowymi
+    poprzez interpolację. Równolegle, interfejs użytkownika Tkinter obsługuje kontrolki animacji,
+    światła i materiału, które są zintegrowane z renderowanym środowiskiem w Pygame.
 
 ### moduł src
     Moduł src zawiera implementację poszczegolnych funkcjonalności programu, min. kamery, interpolacji, klatek kluczowych, sposobu zachowywania ise światła, wczytywania plików oraz renderowania animacji do pliku wideo.
