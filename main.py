@@ -227,8 +227,9 @@ def pygame_thread(frame_slider, transform_mode, interpolation_mode):
             print(f"pygame: capturing frame {frame_slider.get()}")
             frame_idx = frame_slider.get()
             print(frame_idx)
-            frame = save_frame()
-            all_frames[frame_idx] = frame
+            if (frame_slider.get() != 0):
+                frame = save_frame(f"frames/{frame_slider.get()}.png")
+                all_frames[frame_idx] = frame
             if frame_slider.get() < frame_slider.cget('to'):
                 frame_slider.set(frame_idx + 1)
             else:

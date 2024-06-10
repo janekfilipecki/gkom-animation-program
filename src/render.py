@@ -5,11 +5,12 @@ from OpenGL.GL import (glPixelStorei, GL_PACK_ALIGNMENT, glReadPixels,
 from PIL import Image
 
 
-def save_frame():
+def save_frame(filename):
     glPixelStorei(GL_PACK_ALIGNMENT, 1)
     data = glReadPixels(0, 0, 800, 600, GL_RGB, GL_UNSIGNED_BYTE)
     image = Image.frombytes("RGB", (800, 600), data)
     image = image.transpose(Image.FLIP_TOP_BOTTOM)
+    image.save(filename)
     return image
 
 
