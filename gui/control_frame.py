@@ -7,11 +7,20 @@ def create_control_frame(frame, save_keyframe_handler, render_handler):
                             to=100, orient=tk.HORIZONTAL, label="Klatki")
     frame_slider.grid(row=1, column=0, pady=5)
 
+    # Pole do wprowadzania ilości klatek
+    frame_count_entry = tk.Entry(frame)
+    frame_count_entry.grid(row=2, column=0, pady=5)
+
+    # Przycisk do aktualizacji wartości maksymalnej slidera
+    update_button = tk.Button(frame, text="Ustaw ilość klatek", command=lambda: update_slider_max(frame_slider, frame_count_entry))
+    update_button.grid(row=3, column=0, pady=5)
+
+
     keyframe_label = tk.Label(frame, text="Keyframes: []")
-    keyframe_label.grid(row=2, column=0, pady=5)
+    keyframe_label.grid(row=4, column=0, pady=5)
 
     keyframe_listbox = tk.Listbox(frame, height=5)
-    keyframe_listbox.grid(row=3, column=0, pady=5)
+    keyframe_listbox.grid(row=5, column=0, pady=5)
 
     keyframe_mode = tk.StringVar()
     interpolation_mode = tk.StringVar()
@@ -40,9 +49,21 @@ def create_control_frame(frame, save_keyframe_handler, render_handler):
         keyframe_frame)).grid(row=7, column=1, sticky=tk.E, padx=5, pady=10)
 
     tk.Button(frame, text="Wstaw Klatkę Kluczową", command=lambda: show_keyframe_options(
-        keyframe_frame, keyframe_mode, interpolation_mode)).grid(row=2, column=0, pady=10)
+        keyframe_frame, keyframe_mode, interpolation_mode)).grid(row=6, column=0, pady=10)
 
     render_button = tk.Button(frame, text="Renderuj animację", command=lambda: render_handler(frame_slider))
-    render_button.grid(row=8, column=0, columnspan=2, padx=10, pady=10)
+    render_button.grid(row=10, column=0, columnspan=2, padx=10, pady=10)
 
-    return frame_slider, transform_mode, interpolation_mode
+    return frame_slider, transform_mode, interpolation_mode, frame_count_entry, update_button
+
+
+    # Funkcja aktualizująca maksymalną wartość slidera
+def update_slider_max(frame_slider, frame_count_entry):
+    try:
+        max_value = int(frame_count_entry.get())
+        frame_slider.config(to=max_value)
+        frame_count_entry.delete(0, tk.END)
+        frame_count_entry.insert(0, "")
+    except ValueError:
+        frame_count_entry.delete(0, tk.END)
+        frame_count_entry.insert(0, 'Invalid input')

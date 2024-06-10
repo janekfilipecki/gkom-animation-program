@@ -309,7 +309,7 @@ def create_gui():
 
     control_frame = ttk.Frame(notebook)
     control_frame.grid(row=1, column=0, columnspan=2, pady=20)
-    frame_slider, transform_mode, interpolation_mode = create_control_frame(
+    frame_slider, transform_mode, interpolation_mode, frame_count_entry, update_button = create_control_frame(
         control_frame, save_keyframe_handler, render_handler)
 
     light_frame = ttk.Frame(notebook)
