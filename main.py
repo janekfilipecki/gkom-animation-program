@@ -1,4 +1,4 @@
-import copy
+import os
 import pygame
 from pygame.locals import DOUBLEBUF, OPENGL
 from OpenGL.GL import (glClear, GL_COLOR_BUFFER_BIT, GL_DEPTH_BUFFER_BIT,
