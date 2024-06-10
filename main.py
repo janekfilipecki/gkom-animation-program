@@ -229,7 +229,7 @@ def pygame_thread(frame_slider, transform_mode, interpolation_mode):
             print(frame_idx)
             frame = save_frame()
             all_frames[frame_idx] = frame
-            if frame_slider.get() < 100:
+            if frame_slider.get() < frame_slider.cget('to'):
                 frame_slider.set(frame_idx + 1)
             else:
                 rendering = False
