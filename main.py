@@ -109,12 +109,22 @@ def update_transformations(frame_slider):
         return start_translate, start_rotate, start_scale
 
     alpha = (current_frame - start_frame) / (end_frame - start_frame)
-    translate = [interpolate(start_translate[i], end_translate[i],
-                             alpha, interpolation_mode) for i in range(3)]
-    rotate = [interpolate(start_rotate[i], end_rotate[i],
-                          alpha, interpolation_mode) for i in range(3)]
-    scale = [interpolate(start_scale[i], end_scale[i], alpha,
-                         interpolation_mode) for i in range(3)]
+    if interpolation_mode == "Linear":
+        translate = [interpolate(start_translate[i], end_translate[i],
+                                alpha, interpolation_mode) for i in range(3)]
+        rotate = [interpolate(start_rotate[i], end_rotate[i],
+                            alpha, interpolation_mode) for i in range(3)]
+        scale = [interpolate(start_scale[i], end_scale[i], alpha,
+                            interpolation_mode) for i in range(3)]
+    else:
+        if current_frame >= end_frame:
+            translate = end_translate
+            rotate = end_rotate
+            scale = end_scale
+        else:
+            translate = start_translate
+            rotate = start_rotate
+            scale = start_scale
 
     return translate, rotate, scale
 
